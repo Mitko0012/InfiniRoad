@@ -20,7 +20,7 @@ const axesList = [
 let tileTypes = Object.freeze({
     STRAIGHT: {
         index: 0,
-        probability: 5,
+        probability: 2,
         check(outputNeighbours, undefinedNeighbours) {
             if(outputNeighbours.length === 2)
                 return true;
@@ -215,13 +215,16 @@ let tileTypes = Object.freeze({
     },
     NO_ROAD: {
         index: 1,
-        probability: 9,
+        probability: 1,
         check(outputNeighbours, undefinedNeighbours) {
             return outputNeighbours.length === 0;
         },
         generatePoints(chunk, outputNeighbours, undefinedNeighbours) {
             chunk.hasInit = true;
             chunk.tileType = tileTypes.NO_ROAD.index;
+            chunk.splineData = {};
+            chunk.splineData.splines = [];
+            chunk.splineData.paths = [];
         },
         generateSplineData(chunk) {
             
@@ -229,7 +232,7 @@ let tileTypes = Object.freeze({
     },
     T_INTERSECTION: {
         index: 2,
-        probability: 1,
+        probability: 6,
         check(outputNeighbours, undefinedNeighbours) {
             return outputNeighbours.length === 3 || (outputNeighbours.length < 3 && outputNeighbours.length + undefinedNeighbours.length >= 3);
         },
@@ -321,6 +324,7 @@ let tileTypes = Object.freeze({
             }
             chunk.splineData = {};
             chunk.splineData.splines = [];
+            chunk.splineData.paths = [];
             let xCenter = Math.random() * 2 - 1;
             let zCenter = Math.random() * 2 - 1;
             chunk.splineData.center = {posX: xCenter, posZ: zCenter};
@@ -363,7 +367,6 @@ let tileTypes = Object.freeze({
             }
         },
         generateSplineData(chunk) {
-            chunk.splineData.paths = [];
             for(let spline of chunk.splineData.splines) {
                 let path = evenPath(pathFromSpline(spline, divisionsInSplineSegment));
                 chunk.splineData.paths.push(path);
@@ -468,7 +471,6 @@ function collapseChunks(chunkPass) {
         values = Object.values(chunkData).sort((a, b) => a.possibleTiles.length - b.possibleTiles.length);
         i = -1;
     }
-    console.log(savedValues.reduce((acc, next) => !next.chunk.hasInit? acc + 1 : acc, 0));
 }
 
 function determineValues(chunk) {
@@ -491,8 +493,6 @@ function determineValues(chunk) {
         if(tileType.check(neighboursWithOutputs, undefinedNeighbours))
             possibleTiles.push(tileType.index);;
     }
-    if(possibleTiles.length === 0)
-        console.log("debug");
     return {
         chunk, undefinedNeighbours, neighboursWithOutputs, possibleTiles, neighbours
     };

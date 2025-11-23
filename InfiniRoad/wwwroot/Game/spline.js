@@ -1,4 +1,4 @@
-const divisionSize = 1/3;
+const divisionSize = 3.4/3;
 
 function getPointOnQuadCurve(curve, point) {
     let ab = linearAlgebra.lerpVec2(curve[0], curve[1], point);
