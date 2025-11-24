@@ -193,11 +193,11 @@ let drawingData = (() => {
                 if(value.length === 16) 
                     gl.uniformMatrix4fv(location, false, value);
                 else if(value.length === 4)
-                    gl.uniform4f(location, false, value[0], value[1], value[2], value[3]);
+                    gl.uniform4f(location, value[0], value[1], value[2], value[3]);
                 else if(value.length === 3)
-                    gl.uniform4f(location, false, value[0], value[1], value[2]);
+                    gl.uniform3f(location, value[0], value[1], value[2]);
                 else if(value.length === 2)
-                    gl.uniform4f(location, false, value[0], value[1]);
+                    gl.uniform3f(location, value[0], value[1]);
                 else {
                     let index;
                     for(let i = 0; i < 8; i++) {

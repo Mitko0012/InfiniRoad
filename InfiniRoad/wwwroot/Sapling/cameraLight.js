@@ -9,6 +9,7 @@ let projMatrix;
 let fov = 45;
 let nearPlane = 0.001;
 let farPlane = 1000;
+let sunDirection = linearAlgebra.getVector3(0, 1, 0);
 
 function updateMatrices() {
     camMatrix = linearAlgebra.multiplyMatrices(linearAlgebra.rotateAroundY(-camAngleY * Math.PI / 180), linearAlgebra.getTranslationMatrix(-camPosX, -camPosY, -camPosZ))

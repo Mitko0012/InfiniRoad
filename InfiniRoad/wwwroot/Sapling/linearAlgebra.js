@@ -31,11 +31,22 @@ let linearAlgebra = (() => {
         return Math.sqrt(Math.pow(vector[0], 2) + Math.pow(vector[1], 2) + Math.pow(vector[2], 2) + Math.pow(vector[3], 2));
     }
 
+    function getVectorMagnitudeVec3(vector) {
+        return Math.sqrt(Math.pow(vector[0], 2) + Math.pow(vector[1], 2) + Math.pow(vector[2], 2));
+    }
+
     function normalizeVec4(vector) {
         let magnitude = getVectorMagnitudeVec4(vector);
         if(magnitude == 0)
             return vector;
         return[vector[0] / magnitude, vector[1] / magnitude, vector[2] / magnitude, vector[3] / magnitude];   
+    }
+
+    function normalizeVec3(vector) {
+        let magnitude = getVectorMagnitudeVec3(vector);
+        if(magnitude == 0)
+            return vector;
+        return[vector[0] / magnitude, vector[1] / magnitude, vector[2] / magnitude];   
     }
 
     function normalizeVec2(vector) {
@@ -142,6 +153,14 @@ let linearAlgebra = (() => {
         return Math.sqrt(Math.pow(vec1[0], 2) + Math.pow(vec1[1], 2));
     }
 
+    function crossVector3(vec1, vec2) {
+        return [
+            vec1[1] * vec2[2] - vec1[2] * vec2[1],
+            vec1[2] * vec2[0] - vec1[0] * vec2[2],
+            vec1[0] * vec2[1] - vec1[1] * vec2[0],
+        ]
+    }
+
     return {
         getVector2,
         getVector3,
@@ -157,10 +176,13 @@ let linearAlgebra = (() => {
         rotateAroundY,
         rotateAroundZ,
         getVectorMagnitudeVec4,
+        getVectorMagnitudeVec3,
         normalizeVec4,
+        normalizeVec3,
         normalizeVec2,
         scaleVector,
         lerpVec2,
-        getVectorMagnitudeVec2
+        getVectorMagnitudeVec2,
+        crossVector3
     };
 })();

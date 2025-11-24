@@ -17,6 +17,12 @@ const axesList = [
     axes.RIGHT
 ];
 
+const roadPointTypes = Object.freeze({
+    nextChunkTerminating: 0,
+    middlePoint: 1,
+    interchangeTerminating: 2
+});
+
 let tileTypes = Object.freeze({
     STRAIGHT: {
         index: 0,
@@ -152,7 +158,7 @@ let tileTypes = Object.freeze({
             chunk.tileType = tileTypes.STRAIGHT.index;
             const edgeFarPoint = 6;
             const edgeNearPoint = 4;
-            const regularRange = 6;
+            const regularRange = 3;
             let points = Object.values(chunk.pointData);
             let point1 = points[0];
             let point2 = points[1];
@@ -211,6 +217,41 @@ let tileTypes = Object.freeze({
             let path = evenPath(pathFromSpline(chunk.splineData.splines[0], divisionsInSplineSegment));
             chunk.splineData.paths = [];
             chunk.splineData.paths[0] = path;
+        },
+        generateRoad(chunk) {
+            chunk.roads = [];
+            chunk.roads.push({
+                startingPoint: {
+                    type: roadPointTypes.nextChunkTerminating, 
+                    posX: chunk.splineData.paths[0].divisions[0][0], 
+                    posZ: chunk.splineData.paths[0].divisions[0][1],
+                    nextIndex: 0
+                },
+                pointSegments: {},
+                points: []
+            })
+            for(let i = 0; i < chunk.splineData.paths[0].divisions.length; i++) {
+                if(i === chunk.splineData.paths[0].divisions.length - 1)
+                    chunk.roads[0].points.push({
+                        type: roadPointTypes.middlePoint, 
+                        posX: chunk.splineData.paths[0].divisions[i][0], 
+                        posZ: chunk.splineData.paths[0].divisions[i][1],
+                        prevIndex: i
+                    });
+                else
+                    chunk.roads[0].points.push({
+                        type: roadPointTypes.middlePoint, 
+                        posX: chunk.splineData.paths[0].divisions[i][0], 
+                        posZ: chunk.splineData.paths[0].divisions[i][1],
+                        prevIndex: i,
+                        nextIndex: i + 1
+                    });
+                chunk.roads[0].pointSegments[i] = {
+                    leftOccupied: false,
+                    rightOccupied: false,
+                    length: chunk.splineData.paths[0].lengths[i]
+                }
+            }
         }
     },
     NO_ROAD: {
@@ -226,9 +267,8 @@ let tileTypes = Object.freeze({
             chunk.splineData.splines = [];
             chunk.splineData.paths = [];
         },
-        generateSplineData(chunk) {
-            
-        }
+        generateSplineData(chunk) { },
+        generateRoad(chunk) { }
     },
     T_INTERSECTION: {
         index: 2,
@@ -371,20 +411,14 @@ let tileTypes = Object.freeze({
                 let path = evenPath(pathFromSpline(spline, divisionsInSplineSegment));
                 chunk.splineData.paths.push(path);
             }
+        },
+        generateRoad(chunk) { 
+            // Not implemented yet
         }
     }
 });
 
 const tileTypesList = Object.freeze([tileTypes.STRAIGHT, tileTypes.NO_ROAD, tileTypes.T_INTERSECTION]);
-
-function getSpline(chunk) {
-    if(!chunk.hasInit)
-        return;
-    switch(chunk.tileType) {
-        case tileTypes.STRAIGHT.index:
-            
-    }
-}
 
 function getLeft(axis) {
     switch(axis) {

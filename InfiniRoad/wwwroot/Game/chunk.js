@@ -7,7 +7,7 @@
     let currentCamChunkZ;
     let chunkLength;
     const chunkScale = 16;
-    const segmentSize = 0.25;
+    const segmentSize = 1;
     let chunksToCollapse = [];
     let terrainShader;
     let roadShader;
@@ -33,14 +33,14 @@
                         activeChunks[String(i) + " " + String(j)] = currentChunk;
                     } else if(!currentChunk.isActive) {
                         currentChunk.isActive = true;
-                        generateSplineData(currentChunk);
+                        generateData(currentChunk);
                         currentChunk.geometry = generateGeometry(currentChunk);
                         generateRoadGeometry(currentChunk);
                         activeChunks[String(i) + " " + String(j)] = currentChunk;
                     }
                 }
             collapseChunks(chunksToCollapse);
-            chunksToCollapse.forEach(x => { generateSplineData(x); generateRoadGeometry(x); x.geometry = generateGeometry(x)});
+            chunksToCollapse.forEach(x => { generateData(x); generateRoadGeometry(x); x.geometry = generateGeometry(x)});
             chunksToCollapse = [];
             let minX = lastCamChunkX - viewDistance;
             let maxX = lastCamChunkX + viewDistance;
@@ -108,6 +108,9 @@
         terrainShader.setUniform("transformationMatrix", linearAlgebra.formatMatrix(transformMatrix));
         terrainShader.setUniform("cameraMatrix", linearAlgebra.formatMatrix(camMatrix));
         terrainShader.setUniform("projectionMatrix", linearAlgebra.formatMatrix(projMatrix));
+        let processedSunDirection = linearAlgebra.normalizeVec3(sunDirection);
+        processedSunDirection = linearAlgebra.getVector3(-sunDirection[0], -sunDirection[1], -sunDirection[2]);
+        terrainShader.setUniform("lightDirection", processedSunDirection);
         chunk.geometry.bind();
         gl.drawElements(gl.TRIANGLES, chunkLength, gl.UNSIGNED_SHORT, 0);
         roadShader.bind();
@@ -123,157 +126,209 @@
         return Math.trunc((value + 8) / 16); 
     }
 
-    function generateSplineData(chunk) {
-        switch(chunk.tileType) {
-            case(0):
-                tileTypes.STRAIGHT.generateSplineData(chunk);
-            case(2):
-                tileTypes.T_INTERSECTION.generateSplineData(chunk);
-        }
+    function generateData(chunk) {
+        if(chunk.xCenter === 0 && chunk.zCenter === 0)
+            console.log(" ");
+        tileTypesList[chunk.tileType].generateSplineData(chunk);
+        tileTypesList[chunk.tileType].generateRoad(chunk);
     }
 
     function generateGeometry(chunk) {
         let vertexData = [];
+        let vertices = {};
         let elemData = [];
         const maxHeight = 4;
-        const maxHeightNearRoad = 0.8;
+        const maxHeightNearRoad = 4;
         let vertIndex = 0;
         for(let x = -8; x < 8; x += segmentSize) {
+            let rowData = [];
+            vertexData.push(rowData);
             for(let z = -8; z < 8; z += segmentSize) {
-                let roadDistance = Number.MAX_SAFE_INTEGER;
-                for(let path of chunk.splineData.paths) {
-                    for(let i = 0; i < path.divisions.length; i++) {
-                        let vector = linearAlgebra.getVector2(path.divisions[i][0] - x, path.divisions[i][1] - z);
-                        let distance = linearAlgebra.getVectorMagnitudeVec2(vector);
-                        roadDistance = distance < roadDistance ? distance : roadDistance;
+                let xValues = [x, x + segmentSize, x, x + segmentSize];
+                let zValues = [z, z, z + segmentSize, z + segmentSize];
+                for(let i = 0; i < xValues.length; i++) {
+                    let x = xValues[i];
+                    let z = zValues[i];
+                    let roadDistance = Number.MAX_SAFE_INTEGER;
+                    for(let path of chunk.splineData.paths) {
+                        for(let i = 0; i < path.divisions.length; i++) {
+                            let vector = linearAlgebra.getVector2(path.divisions[i][0] - x, path.divisions[i][1] - z);
+                            let distance = linearAlgebra.getVectorMagnitudeVec2(vector);
+                            roadDistance = distance < roadDistance ? distance : roadDistance;
+                        }
                     }
+                    let maxHeight = Number.MAX_SAFE_INTEGER;
+                    if(roadDistance <= 2.4)
+                        maxHeight = -0.5;
+                    else if (roadDistance < 6)
+                        maxHeight = maxHeightNearRoad * (roadDistance - 3) / 3;
+                    let positionX = (chunk.xCenter * chunkScale + x) / 8;
+                    let positionY = (chunk.zCenter * chunkScale + z) / 8;
+                    let heightData = perlin(positionX, positionY, 0);
+                    heightData = 4 * heightData + 2;
+                    heightData = Math.min(maxHeight, heightData);
+                    if(rowData.length - 2 >= 0)
+                        prevHeight = rowData[rowData.length - 2];
+                    rowData.push([x, heightData, z]);
+                    if(vertices[x + " " + z] === undefined)
+                        vertices[x + " " + z] = [x, heightData, z];
                 }
-                let maxHeight = Number.MAX_SAFE_INTEGER;
-                if(roadDistance <= 2.4) {
-                    maxHeight = -0.5;
-                } else if (roadDistance < 6) {
-                    maxHeight = maxHeightNearRoad * (roadDistance - 3) / 3;
-                }
-                let positionX = chunk.xCenter + x / 16;
-                let positionY = chunk.xCenter + z / 16;
-                let heightData = perlin(positionX, positionY);
-                heightData = 2*(heightData + 1);
-                heightData = Math.min(maxHeight, heightData);
-                let prevHeight = heightData;
-                if(vertexData.length - 2 >= 0)
-                    prevHeight = vertexData[vertexData.length - 2];
-                vertexData.push(x, prevHeight, z);
-                vertexData.push(x + segmentSize, prevHeight, z);
-                vertexData.push(x, heightData, z + segmentSize);
-                vertexData.push(x + segmentSize, heightData, z + segmentSize);
                 elemData.push(vertIndex, vertIndex + 2, vertIndex + 3);
                 elemData.push(vertIndex, vertIndex + 1, vertIndex + 3);
                 vertIndex += 4;
             }
         }
+        let drawData = [];
+        let normals = {};
+        for(let i = -8; i <= 8; i += segmentSize) {
+            let rowData = [];
+            for(let j = -8; j <= 8; j += segmentSize) {
+                let currentVertex = vertices[i + " " + j];
+                let prevNeighbourX = vertices[currentVertex[0] - segmentSize + " " + currentVertex[2]];
+                let nextNeighbourX = vertices[currentVertex[0] + segmentSize + " " + currentVertex[2]];
+                let prevNeighbourZ = vertices[currentVertex[0] + " " + currentVertex[2] - segmentSize];
+                let nextNeighbourZ = vertices[currentVertex[0] + " " + (currentVertex[2] + segmentSize)];
+                if(prevNeighbourX === undefined)
+                    prevNeighbourX = currentVertex;
+                if(prevNeighbourZ === undefined)
+                    prevNeighbourZ = currentVertex;
+                if(nextNeighbourX === undefined)
+                    nextNeighbourX = currentVertex;
+                if(nextNeighbourZ === undefined)
+                    nextNeighbourZ = currentVertex;
+                let dhdx = prevNeighbourX[1] - nextNeighbourX[1];
+                let dhdz = prevNeighbourZ[1] - nextNeighbourZ[1];
+                let dx = linearAlgebra.getVector3(2*segmentSize, dhdx, 0);
+                let dz = linearAlgebra.getVector3(0, dhdz, 2*segmentSize);
+                let normal = linearAlgebra.normalizeVec3(linearAlgebra.crossVector3(dx, dz));
+                normals[i + " " + j] = normal;
+            }
+        }
+        for(let i = 0; i < vertexData.length; i++) {
+            for(let j = 0; j < vertexData[i].length; j++) {
+                drawData.push(vertexData[i][j][0]);
+                drawData.push(vertexData[i][j][1]);
+                drawData.push(vertexData[i][j][2]);
+                drawData.push(normals[vertexData[i][j][0] + " " + vertexData[i][j][2]][0]);
+                drawData.push(normals[vertexData[i][j][0] + " " + vertexData[i][j][2]][1]);
+                drawData.push(normals[vertexData[i][j][0] + " " + vertexData[i][j][2]][2]);
+            }
+        }
         chunkLength = elemData.length;
-        return drawingData.createMesh([3], vertexData, elemData);
+        return drawingData.createMesh([3, 3], drawData, elemData);
     }
 
-    function clampVert(v, point) {
+    function clampRegVert(v, point) {
         const distance = 1.7;
-        if(v[0][0] <= minX) {
+        if(v[0][0] <= minX || v[0][0] >= maxX) {
             v[0][0] = point[0];
-            v[0][2] = point[1] - distance;
+            if(v[0][2] < v[1][2])
+                v[0][2] = point[1] - distance;
+            else
+                v[0][2] = point[1] + distance;
         }
-        if(v[1][0] <= minX) {
+        if(v[1][0] <= minX || v[1][0] >= maxX) {
             v[1][0] = point[0];
-            v[1][2] = point[1] + distance;
+            if(v[1][2] < v[0][2])
+                v[1][2] = point[1] - distance;
+            else
+                v[1][2] = point[1] + distance;
         }
-        if(v[0][0] >= maxX) {
-            v[0][0] = point[0];
-            v[0][2] = point[1] - distance;
-        }
-        if(v[1][0] >= maxX) {
-            v[1][0] = point[0];
-            v[1][2] = point[1] + distance;
-        }
-        if(v[0][2] <= minZ) {
-            v[0][0] = point[0] + distance;
+        if(v[0][2] <= minZ || v[0][2] >= maxZ) {
+            if(v[0][0] < v[1][0])
+                v[0][0] = point[0] - distance;
+            else
+                v[0][0] = point[0] + distance;
             v[0][2] = point[1];
         } 
-        if(v[1][2] <= minZ) {
-            v[1][0] = point[0] - distance;
-            v[1][2] = point[1];
-        }
-        if(v[0][2] >= maxZ) {
-            v[0][0] = point[0] + distance;
-            v[0][2] = point[1];
-        }
-        if(v[1][2] >= maxZ) {
-            v[1][0] = point[0] + distance;
+        if(v[1][2] <= minZ || v[1][2] >= maxZ) {
+            if(v[1][0] < v[0][0])
+                v[1][0] = point[0] - distance;
+            else
+                v[1][0] = point[0] + distance;
             v[1][2] = point[1];
         }
         return v;
     }
 
-    function clampRegVert(v, point) {
+    function clampStartVert(v, point) {
         const distance = 1.7;
-        if(v[0][0] <= minX) {
+        if(point[0] - minX < 0.0001 || maxX - point[0] < 0.0001) {
             v[0][0] = point[0];
-            v[0][2] = point[1] - distance;
-        }
-        if(v[1][0] <= minX) {
             v[1][0] = point[0];
-            v[1][2] = point[1] + distance;
+            if(v[0][2] < v[1][2]) {
+                v[0][2] = point[1] - distance;
+                v[1][2] = point[1] + distance;
+            }
+            else {
+                v[0][2] = point[1] - distance;
+                v[1][2] = point[1] + distance;
+            }
         }
-        if(v[0][0] >= maxX) {
-            v[0][0] = point[0];
-            v[0][2] = point[1] + distance;
-        }
-        if(v[1][0] >= maxX) {
-            v[1][0] = point[0];
-            v[1][2] = point[1] - distance;
-        }
-        if(v[0][2] <= minZ) {
-            v[0][0] = point[0] - distance;
+        if(point[1] - minZ < 0.0001) {
+            if(v[0][0] < v[1][0]) {
+                v[0][0] = point[0] - distance;
+                v[1][0] = point[0] + distance;
+            }
+            else {
+                v[0][0] = point[0] + distance;
+                v[1][0] = point[0] - distance;
+            }
             v[0][2] = point[1];
+            v[1][2] = point[1];
         } 
-        if(v[1][2] <= minZ) {
-            v[1][0] = point[0] + distance;
-            v[1][2] = point[1];
-        }
-        if(v[0][2] >= maxZ) {
-            v[0][0] = point[0] + distance;
+        if(maxZ - point[1] < 0.0001) {
+            if(v[0][0] < v[1][0]) {
+                v[0][0] = point[0] + distance;
+                v[1][0] = point[0] - distance;
+            }
+            else {
+                v[0][0] = point[0] - distance;
+                v[1][0] = point[0] + distance;
+            }
             v[0][2] = point[1];
-        }
-        if(v[1][2] >= maxZ) {
-            v[1][0] = point[0] - distance;
-            v[1][2] = point[1];
+            v[1][2] = point[1]
         }
         return v;
     }
 
     function clampEndVert(v, point) {
         const distance = 1.7;
-        if(point[0] - minX < 0.0001) {
+        if(point[0] - minX < 0.0001 || maxX - point[0] < 0.0001) {
             v[0][0] = point[0];
-            v[0][2] = point[1] - distance;
             v[1][0] = point[0];
-            v[1][2] = point[1] +     distance;
-        }
-        if(maxX - point[0] < 0.0001) {
-            v[0][0] = point[0];
-            v[0][2] = point[1] - distance;
-            v[1][0] = point[0];
-            v[1][2] = point[1] + distance;
+            if(v[0][2] < v[1][2]) {
+                v[0][2] = point[1] - distance;
+                v[1][2] = point[1] + distance;
+            }
+            else {
+                v[0][2] = point[1] + distance;
+                v[1][2] = point[1] - distance;
+            }
         }
         if(point[1] - minZ < 0.0001) {
-            v[0][0] = point[0] - distance;
+            if(v[0][0] < v[1][0]) {
+                v[0][0] = point[0] + distance;
+                v[1][0] = point[0] - distance;
+            }
+            else {
+                v[0][0] = point[0] - distance;
+                v[1][0] = point[0] + distance;
+            }
             v[0][2] = point[1];
-            v[1][0] = point[0] + distance;
             v[1][2] = point[1];
         } 
         if(maxZ - point[1] < 0.0001) {
-            v[0][0] = point[0] + distance;
+            if(v[0][0] < v[1][0]) {
+                v[0][0] = point[0] - distance;
+                v[1][0] = point[0] + distance;
+            }
+            else {
+                v[0][0] = point[0] + distance;
+                v[1][0] = point[0] - distance;
+            }
             v[0][2] = point[1];
-            v[1][0] = point[0] - distance;
-            v[1][2] = point[1];
+            v[1][2] = point[1]
         }
         return v;
     }
@@ -282,7 +337,7 @@
         const distance = 1.7;
         const temporaryY = 0.1;
         let elements = [];
-        let vertices = [];  
+        let vertices = [];
         for(let path of chunk.splineData.paths) {
             let prevPoint = path.divisions[0];
             let prevPrevPoint = path.divisions[0];
@@ -292,23 +347,37 @@
             ];
             prevPointVertices[0][1] = temporaryY;
             prevPointVertices[1][1] = temporaryY;
-            prevPointVertices = clampVert(prevPointVertices, prevPoint);
+            prevPointVertices = clampStartVert(prevPointVertices, prevPoint);
             let texturePos = 1;
+            let prevNormal = null;
             for(let i = 1; i < path.divisions.length; i++) {
                 let point = path.divisions[i];
+                let dirPrev = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(prevPoint[0] - prevPrevPoint[0], prevPoint[1] - prevPrevPoint[1]));
                 let nextPoint;
                 if (i + 1 < path.divisions.length) {
                     nextPoint = path.divisions[i + 1];
                 } else {
-                    nextPoint = linearAlgebra.getVector2(
-                        point[0] * 2 - prevPoint[0],
-                        point[1] * 2 - prevPoint[1]
-                    );
+                    nextPoint = [
+                        point[0] + dirPrev[0],
+                        point[1] + dirPrev[1]
+                    ];
                 }
-                let dirPrev = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(prevPoint[0] - prevPrevPoint[0], prevPoint[1] - prevPrevPoint[1]));
                 let dirNext = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(nextPoint[0] - point[0], nextPoint[1] - point[1]));
-                let avgDir = linearAlgebra.normalizeVec2(linearAlgebra.addVectors(dirPrev, dirNext));
-                let scalingVector = linearAlgebra.scaleVector(linearAlgebra.normalizeVec2(linearAlgebra.getVector2(-avgDir[1], avgDir[0])), distance);
+                let avg = linearAlgebra.addVectors(dirPrev, dirNext);
+                let len = linearAlgebra.getVectorMagnitudeVec2(avg);
+                if (len < 0.001)
+                    avg = dirPrev;
+                let avgDir = linearAlgebra.normalizeVec2(avg);
+                let perp = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(-avgDir[1], avgDir[0]));
+                if (prevNormal !== null) {
+                    let dot = prevNormal[0] * perp[0] + prevNormal[1] * perp[1];
+                    if (dot < 0) {
+                        perp[0] *= -1;
+                        perp[1] *= -1;
+                    }
+                }
+                prevNormal = [...perp];
+                let scalingVector = linearAlgebra.scaleVector(perp, distance);
                 let pointVertices = [[], [], []];
                 pointVertices[0][1] = temporaryY;
                 pointVertices[1][1] = temporaryY;
@@ -316,7 +385,7 @@
                 pointVertices[0][2] = point[1] - scalingVector[1];
                 pointVertices[1][0] = point[0] + scalingVector[0]; 
                 pointVertices[1][2] = point[1] + scalingVector[1];
-                if(i === path.divisions.length - 2)
+                if(i === path.divisions.length - 2 && chunk.xCenter === 0 && chunk.zCenter === 0)
                     console.log("");
                 if(i === path.divisions.length - 1)
                     pointVertices = clampEndVert(pointVertices, point);
