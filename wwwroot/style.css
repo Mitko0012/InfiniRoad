@@ -1,0 +1,8 @@
+#drawing-canvas {
+    width: 50vw;
+    height: 50vw;
+    position: relative;
+    left: 50vw;
+    transform: translate(-50%);
+    cursor: none;
+}
