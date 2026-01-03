@@ -156,10 +156,10 @@ function generateGeometry(chunk) {
     chunk.rightZHeightData = [];
     chunk.topXHeightData = [];
     chunk.bottomXHeightData = [];
-    for(let x = -8; x < 8; x += segmentSize) {
+    for(let x = -8; x < 7; x += segmentSize) {
         let rowData = [];
         vertexData.push(rowData);
-        for(let z = -8; z < 8; z += segmentSize) {
+        for(let z = -8; z < 7; z += segmentSize) {
             let xValues = [x, x + segmentSize, x, x + segmentSize];
             let zValues = [z, z, z + segmentSize, z + segmentSize];
             for(let i = 0; i < xValues.length; i++) {
@@ -216,9 +216,9 @@ function generateGeometry(chunk) {
     }
     let drawData = [];
     let normals = {};
-    for(let i = -8; i <= 8; i += segmentSize) {
+    for(let i = -8; i <= 7; i += segmentSize) {
         let rowData = [];
-        for(let j = -8; j <= 8; j += segmentSize) {
+        for(let j = -8; j <= 7; j += segmentSize) {
             let currentVertex = vertices[i + " " + j];
             let prevNeighbourX = vertices[currentVertex[0] - segmentSize + " " + currentVertex[2]];
             let nextNeighbourX = vertices[currentVertex[0] + segmentSize + " " + currentVertex[2]];
@@ -289,19 +289,19 @@ function clampRegVert(v, point) {
 
 function clampStartVert(v, point) {
     const distance = 1.7;
-    if(point[0] - minX < 0.0001 || maxX - point[0] < 0.0001) {
+    if(point[0] - minX < 0.0001) {
         v[0][0] = point[0];
         v[1][0] = point[0];
-        if(v[0][2] < v[1][2]) {
-            v[0][2] = point[1] - distance;
-            v[1][2] = point[1] + distance;
-        }
-        else {
-            v[0][2] = point[1] - distance;
-            v[1][2] = point[1] + distance;
-        }
+        v[0][2] = point[1] - distance;
+        v[1][2] = point[1] + distance;
     }
-    if(point[1] - minZ < 0.0001) {
+    else if(maxX - point[0] < 0.0001) {
+        v[0][0] = point[0];
+        v[1][0] = point[0];
+        v[0][2] = point[1] + distance;
+        v[1][2] = point[1] - distance;
+    }
+    else if(point[1] - minZ < 0.0001) {
         if(v[0][0] < v[1][0]) {
             v[0][0] = point[0] - distance;
             v[1][0] = point[0] + distance;
@@ -313,7 +313,7 @@ function clampStartVert(v, point) {
         v[0][2] = point[1];
         v[1][2] = point[1];
     } 
-    if(maxZ - point[1] < 0.0001) {
+    else if(maxZ - point[1] < 0.0001) {
         if(v[0][0] < v[1][0]) {
             v[0][0] = point[0] + distance;
             v[1][0] = point[0] - distance;
@@ -325,6 +325,8 @@ function clampStartVert(v, point) {
         v[0][2] = point[1];
         v[1][2] = point[1]
     }
+    else
+        console.log("ee");
     return v;
 }
 
@@ -342,7 +344,7 @@ function clampEndVert(v, point) {
             v[1][2] = point[1] - distance;
         }
     }
-    if(point[1] - minZ < 0.0001) {
+    if(point[1] - minZ < 0.001) {
         if(v[0][0] < v[1][0]) {
             v[0][0] = point[0] + distance;
             v[1][0] = point[0] - distance;
@@ -354,7 +356,7 @@ function clampEndVert(v, point) {
         v[0][2] = point[1];
         v[1][2] = point[1];
     } 
-    if(maxZ - point[1] < 0.0001) {
+    if(maxZ - point[1] < 0.001) {
         if(v[0][0] < v[1][0]) {
             v[0][0] = point[0] - distance;
             v[1][0] = point[0] + distance;
@@ -367,6 +369,38 @@ function clampEndVert(v, point) {
         v[1][2] = point[1]
     }
     return v;
+}
+
+function clampSideTIntersection() {
+    
+}
+
+function clampEndTIntesection(interchange, point, center) {
+    let edgeVecs = [
+        [0, -1.7],
+        [1.7, 0],
+        [0, 1.7],
+        [-1.7, 0]
+    ];
+    let rotateMat = linearAlgebra.rotateAroundY(interchange.angle);
+    for(let i = 0; i < edgeVecs.length; i++) {
+        let vec = edgeVecs[i];
+        let rotatedVec = linearAlgebra.multiplyMatrixAndVector(rotateMat, linearAlgebra.getVector4(vec[0], 0, vec[1], 0));
+        edgeVecs[i] = linearAlgebra.getVector2(rotatedVec[0], rotatedVec[2]);
+    } 
+    for(let vec of edgeVecs) {
+        let resultVec = linearAlgebra.getVector2(center.posX + vec[0], center.posZ + vec[1]);
+        if(equalFloatNumbers(point[0], resultVec[0]) &&
+            equalFloatNumbers(point[1], resultVec[1])) {
+            let perpVec = linearAlgebra.getVector2(-vec[1], vec[0]);
+            let resultArray = [[0, 0, 0], [0, 0, 0]];
+            resultArray[0][0] = point[0] + perpVec[0];
+            resultArray[0][2] = point[1] + perpVec[1];
+            resultArray[1][0] = point[0] - perpVec[0];
+            resultArray[1][2] = point[1] - perpVec[1];
+            return resultArray;
+        }
+    }
 }
 
 function generateRoadGeometry(chunk) {
@@ -424,8 +458,16 @@ function generateRoadGeometry(chunk) {
             pointVertices[1][2] = point[1] + scalingVector[1];
             if(i === path.divisions.length - 2 && chunk.xCenter === 0 && chunk.zCenter === 0)
                 console.log("");
-            if(i === path.divisions.length - 1)
-                pointVertices = clampEndVert(pointVertices, point);
+            if(i === path.divisions.length - 1) {
+                switch(chunk.tileType) {
+                    case tileTypes.STRAIGHT.index:
+                        pointVertices = clampEndVert(pointVertices, point);
+                        break;
+                    case tileTypes.T_INTERSECTION.index:
+                        pointVertices = clampEndTIntesection(chunk.interchange, point, chunk.splineData.center);
+                        break;
+                }
+            }
             else
                 pointVertices = clampRegVert(pointVertices, point);
             let base = vertices.length / 5;
@@ -449,7 +491,7 @@ function generateRoadGeometry(chunk) {
             } else if(texturePos > 1) {
                 texturePos = 2 / 3;
                 posIncreasing = false;
-            }            
+            }
             vertices.push(pointVertices[0][0]);
             vertices.push(pointVertices[0][1]);
             vertices.push(pointVertices[0][2]);
@@ -460,12 +502,38 @@ function generateRoadGeometry(chunk) {
             vertices.push(pointVertices[1][2]);
             vertices.push(1);
             vertices.push(texturePos);
+            vertices.push(prevPointVertices[0][0]);
+            vertices.push(prevPointVertices[0][1] + 1);
+            vertices.push(prevPointVertices[0][2]);
+            vertices.push(0);
+            vertices.push(texturePos);
+            vertices.push(prevPointVertices[1][0]);
+            vertices.push(prevPointVertices[1][1] + 2);
+            vertices.push(prevPointVertices[1][2]);
+            vertices.push(1);
+            vertices.push(texturePos);        
+            vertices.push(prevPointVertices[0][0] + 0.1);
+            vertices.push(prevPointVertices[0][1] + 1);
+            vertices.push(prevPointVertices[0][2] + 0.1);
+            vertices.push(0);
+            vertices.push(texturePos);
+            vertices.push(prevPointVertices[1][0] + 0.1);
+            vertices.push(prevPointVertices[1][1] + 2);
+            vertices.push(prevPointVertices[1][2] + 0.1);
+            vertices.push(1);
+            vertices.push(texturePos);
             elements.push(base);
             elements.push(base + 1);
             elements.push(base + 2);
             elements.push(base + 1);
             elements.push(base + 2);
             elements.push(base + 3);
+            elements.push(base + 4);
+            elements.push(base + 5);
+            elements.push(base + 6);
+            elements.push(base + 5);
+            elements.push(base + 6);
+            elements.push(base + 7);
             prevPointVertices = pointVertices;
             prevPrevPoint = [...prevPoint];
             prevPoint = [...point];

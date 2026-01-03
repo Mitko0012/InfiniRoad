@@ -21,7 +21,9 @@ let linearAlgebra = (() => {
     }
 
     function scaleVector(vector, scaler) {
-        if(vector.length === 3)
+        if(vector.length === 4)
+            return [vector[0] * scaler, vector[1] * scaler, vector[2] * scaler, vector[3]];
+        else if(vector.length === 3)
             return [vector[0] * scaler, vector[1] * scaler, vector[2] * scaler];
         else if(vector.length === 2)
             return [vector[0] * scaler, vector[1] * scaler];

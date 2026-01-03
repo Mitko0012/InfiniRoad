@@ -97,9 +97,9 @@ onUpdate = () => {
 
     // Spawn new cars on key press
     if(keysDown["r"] && !rDownOnLast)
-        currentCars.push(new NpcCar(chunks["0 0"], chunks["0 0"].roads[0], 6, true));
+        currentCars.push(new NpcCar(chunks["0 0"], chunks["0 0"].roads[0], 2, false, 2));
     if(keysDown["t"] && !tDownOnLast)
-        currentCars.push(new NpcCar(chunks["0 0"], chunks["0 0"].roads[0], 6, false));
+        currentCars.push(new NpcCar(chunks["0 0"], chunks["0 0"].roads[0], 2, false, 8));
 
     rDownOnLast = keysDown["r"];
     tDownOnLast = keysDown["t"];

@@ -20,13 +20,14 @@ const axesList = [
 const roadPointTypes = Object.freeze({
     nextChunkTerminating: 0,
     middlePoint: 1,
-    interchangeTerminating: 2
+    interchangeTerminating: 2,
+    sameChunkTerminating: 3
 });
 
 let tileTypes = Object.freeze({
     STRAIGHT: {
         index: 0,
-        probability: 5,
+        probability: 0,
         check(outputNeighbours, undefinedNeighbours) {
             if(outputNeighbours.length === 2)
                 return true;
@@ -406,8 +407,7 @@ let tileTypes = Object.freeze({
             chunk.hasInit = true;
             chunk.tileType = tileTypes.T_INTERSECTION.index;
             for(let point of Object.values(chunk.pointData)) {
-                const distance = 3;
-                const sidewaysDistance = 4;
+                const distance = 6;
                 let minXGen;
                 let minZGen;
                 let maxXGen;
@@ -415,24 +415,24 @@ let tileTypes = Object.freeze({
                 if(point.posX === minX) {
                     minXGen = minX + distance;
                     maxXGen = chunk.splineData.center.posX - distance; 
-                    minZGen = -sidewaysDistance;
-                    maxZGen = sidewaysDistance;
+                    minZGen = chunk.splineData.center.posZ;
+                    maxZGen = chunk.splineData.center.posZ;
                 }
                 else if(point.posX === maxX) {
                     minXGen = chunk.splineData.center.posX + distance;
                     maxXGen = maxX - distance; 
-                    minZGen = -sidewaysDistance;
-                    maxZGen = sidewaysDistance;
+                    minZGen = chunk.splineData.center.posZ;
+                    maxZGen = chunk.splineData.center.posZ;
                 }
                 else if(point.posZ === minZ) {
-                    minXGen = -sidewaysDistance;
-                    maxXGen = sidewaysDistance;
+                    minXGen = chunk.splineData.center.posX;
+                    maxXGen = chunk.splineData.center.posX;
                     minZGen = minZ + distance;
                     maxZGen = chunk.splineData.center.posZ - distance; 
                 }
                 else if(point.posZ === maxZ) {
-                    minXGen = -sidewaysDistance;
-                    maxXGen = sidewaysDistance;
+                    minXGen = chunk.splineData.center.posX;
+                    maxXGen = chunk.splineData.center.posX;
                     minZGen = chunk.splineData.center.posZ + distance;
                     maxZGen = maxZ - distance;
                 }
@@ -457,8 +457,145 @@ let tileTypes = Object.freeze({
                 chunk.splineData.paths.push(path);
             }
         },
-        generateRoad(chunk) { 
-            // Not implemented yet
+        generateRoad(chunk) {
+            chunk.roads = [];
+            chunk.interchangeRoads = [];
+            let index = 0;
+            for(let path of chunk.splineData.paths) {
+                let totalLength = 0;
+                let nextXOffset = 0;
+                let nextZOffset = 0;
+                if(minX - path.divisions[0][0] < 0.001 && minX - path.divisions[0][0] > -0.001)
+                    nextXOffset = -1;
+                else if(maxX - path.divisions[0][0] < 0.001 && maxX - path.divisions[0][0] > -0.001)
+                    nextXOffset = 1;
+                if(minZ - path.divisions[0][1] < 0.001 && minZ - path.divisions[0][1] > -0.001)
+                    nextZOffset = -1;
+                else if(maxZ - path.divisions[0][1] < 0.001 && maxZ - path.divisions[0][1] > -0.001)
+                    nextZOffset = 1;
+                chunk.roads.push({
+                    pointSegments: {},
+                    points: [{
+                        type: roadPointTypes.nextChunkTerminating, 
+                        posX: path.divisions[0][0], 
+                        posZ: path.divisions[0][1],
+                        nextIndex: 0,
+                        nextChunkData: [
+                            chunk.xCenter + nextXOffset,
+                            chunk.zCenter + nextZOffset
+                        ]
+                    }],
+                    takenSegments: [],
+                    totalLength
+                })
+                for(let i = 1; i < path.divisions.length; i++) {
+                    if(i === path.divisions.length - 1) {
+                        chunk.roads[index].points.push({
+                            type: roadPointTypes.interchangeTerminating, 
+                            posX: path.divisions[i][0], 
+                            posZ: path.divisions[i][1],
+                            prevIndex: i - 1,
+                            nextChunkData: [
+                                chunk.xCenter + nextXOffset,
+                                chunk.zCenter + nextZOffset,
+                            ]
+                        });
+                    }
+                    else
+                        chunk.roads[index].points.push({
+                            type: roadPointTypes.middlePoint, 
+                            posX: chunk.splineData.paths[index].divisions[i][0], 
+                            posZ: chunk.splineData.paths[index].divisions[i][1],
+                            prevIndex: i - 1,
+                            nextIndex: i
+                        });
+                    chunk.roads[index].pointSegments[i - 1] = {
+                        length: chunk.splineData.paths[index].lengths[i],
+                        index: i - 1
+                    }
+                    chunk.roads[index].totalLength += chunk.splineData.paths[index].lengths[i];
+                    chunk.roads[index].takenSegments.push({left: null, right: null});
+                }
+                index++;
+            }
+            let endPoints = chunk.roads.map((x) => x.points[x.points.length - 1]);
+            let firstPoint = endPoints[0];
+            let straightPoints = [];
+            let sidePoint;
+            for(let i = 1; i < endPoints.length; i++) {
+                let currPoint = endPoints[i];
+                if(linearAlgebra.getVectorMagnitudeVec2(linearAlgebra.getVector2(currPoint.posX - firstPoint.posX, currPoint.posZ - firstPoint.posZ)) - 3.4 < 0.001 &&
+                linearAlgebra.getVectorMagnitudeVec2(linearAlgebra.getVector2(currPoint.posX - firstPoint.posX, currPoint.posZ - firstPoint.posZ)) - 3.4 > -0.001) {
+                    straightPoints.push(firstPoint);
+                    straightPoints.push(currPoint);
+                    sidePoint = i === 2? endPoints[1] : endPoints[2];
+                    break;
+                }
+            }
+            if(sidePoint === undefined) {
+                straightPoints.push(endPoints[1]);
+                straightPoints.push(endPoints[2]);
+                sidePoint = firstPoint;
+            }
+            let sideVec = linearAlgebra.getVector2(sidePoint.posX - chunk.splineData.center.posX, sidePoint.posZ - chunk.splineData.center.posZ);
+            sideVec = linearAlgebra.normalizeVec2(sideVec);
+            let angle = Math.atan2(sideVec[1], sideVec[0]) + Math.PI;
+            chunk.interchange = {
+                type: T_INTERSECTION,
+                angle
+            };
+            let interchangeMat = linearAlgebra.rotateAroundY(chunk.interchange.angle);
+            index = 0;
+            while(true) {
+                chunk.interchangeRoads.push([]);
+                for(let contiuningDirection = 0; contiuningDirection < chunk.interchange.type.options; contiuningDirection++) {
+                    let reconstructedRoad = {
+                        pointSegments: {},
+                        points: [],
+                        takenSegments: [],
+                        totalLength: 0
+                    };
+                    let roadData = chunk.interchange.type["road" + String(index)];
+                    let pointDatas = [];
+                    pointDatas.push(roadData.entryPoint);
+                    pointDatas.push(roadData.decidingPoint);
+                    pointDatas.push(roadData[contiuningDirection]);
+                    pointDatas.push(chunk.interchange.type["road" + String(roadData["index" + String(contiuningDirection)])].exitPoint);
+                    let pointIndex = 0;
+                    for(let point of pointDatas) {
+                        let appliedPoint = linearAlgebra.multiplyMatrixAndVector(interchangeMat, linearAlgebra.getVector4(point[0], 0, point[1], 0));
+                        reconstructedRoad.points.push({
+                            posX: appliedPoint[0] + chunk.splineData.center.posX,
+                            posZ: appliedPoint[2] + chunk.splineData.center.posZ,
+                        });
+                        if(pointIndex > 0)
+                            reconstructedRoad.points[pointIndex].prevIndex = pointIndex - 1;
+                        if(pointIndex < pointDatas.length - 1) {
+                            reconstructedRoad.points[pointIndex].nextIndex = pointIndex;
+                            reconstructedRoad.points[pointIndex].type = roadPointTypes.middlePoint;
+                        }
+                        else {
+                            reconstructedRoad.points[pointIndex].type = roadPointTypes.sameChunkTerminating;
+                        }
+                        pointIndex++;
+                    }
+                    for(let i = 0; i < reconstructedRoad.points.length - 1; i++) {
+                        reconstructedRoad.pointSegments[i] = {
+                            length: linearAlgebra.getVectorMagnitudeVec2(linearAlgebra.getVector2(
+                                reconstructedRoad.points[i + 1].posX - reconstructedRoad.points[i].posX,
+                                reconstructedRoad.points[i + 1].posZ - reconstructedRoad.points[i].posZ,
+                            )),
+                            index: i
+                        }
+                        reconstructedRoad.totalLength += reconstructedRoad.pointSegments[i].length;
+                        reconstructedRoad.takenSegments.push({left: null, right: null});
+                    }
+                    chunk.interchangeRoads[index].push(reconstructedRoad);
+                }
+                index++;
+                if(index === chunk.interchange.type.roadsCount)
+                    break;
+            }
         }
     }
 });
@@ -575,4 +712,8 @@ function determineValues(chunk) {
     return {
         chunk, undefinedNeighbours, neighboursWithOutputs, possibleTiles, neighbours
     };
+}
+
+function equalFloatNumbers(a, b) {
+    return a - b > -0.001 && a - b < 0.001; 
 }
