@@ -448,7 +448,7 @@ let tileTypes = Object.freeze({
                     zOffset = -1.7;
                 if(point.posZ === maxZ)
                     zOffset = 1.7;
-                chunk.splineData.splines.push(createSpline([[[point.posX, point.posZ], [posX, posZ], [chunk.splineData.center.posX + xOffset, chunk.splineData.center.posZ + zOffset]]]))
+                chunk.splineData.splines.push(createSpline([[[point.posX, point.posZ], [posX, posZ], [chunk.splineData.center.posX + xOffset, chunk.splineData.center.posZ + zOffset]]]))    
             }
         },
         generateSplineData(chunk) {
@@ -544,10 +544,19 @@ let tileTypes = Object.freeze({
                 type: T_INTERSECTION,
                 angle
             };
+            chunk.edgePoints = [];
             let interchangeMat = linearAlgebra.rotateAroundY(chunk.interchange.angle);
             index = 0;
             while(true) {
                 chunk.interchangeRoads.push([]);
+                chunk.edgePoints.push(T_INTERSECTION["road" + String(index)].entryPoint);
+                let vectorRotate = linearAlgebra.getVector4(chunk.edgePoints[index][0], 0, chunk.edgePoints[index][1], 0);
+                vectorRotate = linearAlgebra.multiplyMatrixAndVector(linearAlgebra.rotateAroundY(angle), vectorRotate);
+                chunk.edgePoints[index][0] = vectorRotate[0];
+                chunk.edgePoints[index][1] = vectorRotate[1];
+                chunk.edgePoints[index][0] += chunk.splineData.center.posX;
+                chunk.edgePoints[index][1] += chunk.splineData.center.posZ;
+                let rotationVec = linearAlgebra.getVector4(chunk.edgePoints[index][0], 0, chunk.edgePoints[index][1], 0);
                 for(let contiuningDirection = 0; contiuningDirection < chunk.interchange.type.options; contiuningDirection++) {
                     let reconstructedRoad = {
                         pointSegments: {},
@@ -592,6 +601,7 @@ let tileTypes = Object.freeze({
                     }
                     chunk.interchangeRoads[index].push(reconstructedRoad);
                 }
+                chunk.noPriority = Math.round(Math.random() * 2);
                 index++;
                 if(index === chunk.interchange.type.roadsCount)
                     break;
