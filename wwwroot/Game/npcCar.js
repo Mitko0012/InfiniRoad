@@ -59,9 +59,9 @@ class NpcCar {
         let point = walkOnRoad(this.currRoad, this.pointIndex, this.facing);
         if(point.lengthTaken !== undefined) {
             let edgePoint = this.currRoad.points[this.facing ? this.currRoad.points.length - 1 : 0];
-            let nextChunk = chunks[String(edgePoint.nextChunkData[0]) + " " + String(edgePoint.nextChunkData[1])];
             switch(edgePoint.type) {
                 case roadPointTypes.nextChunkTerminating:
+                    let nextChunk = chunks[String(edgePoint.nextChunkData[0]) + " " + String(edgePoint.nextChunkData[1])];
                     if(nextChunk !== undefined && nextChunk.geometry !== null) {
                         this.currChunk = nextChunk;
                         for(let road of nextChunk.roads) {
@@ -121,6 +121,17 @@ class NpcCar {
                     this.roadHistory.push(this.currRoad);
                     this.facing = true;
                     break;
+                case roadPointTypes.sameChunkTerminating:
+                    for(let road of this.currChunk.roads) {
+                        let startPoint = road.points[road.points.length - 1];
+                        if(equalFloatNumbers(startPoint.posX, edgePoint.posX) && equalFloatNumbers(startPoint.posZ, edgePoint.posZ)) {
+                            this.currRoad = road;
+                            this.facing = false;
+                            this.roadHistory.push(this.currRoad);
+                            this.pointIndex = point.lengthTaken;
+                            break;
+                        }
+                    }
             }
         }
         point = walkOnRoad(this.currRoad, this.pointIndex, this.facing);
@@ -166,6 +177,8 @@ class NpcCar {
                     break;
                 }
             }
+            if(checkingRoad.takenSegments[index + i] === undefined)
+                console.log("6u6mar");
             checkingRoad.takenSegments[index + i][checkFacing ? "right" : "left"] = this;
             iterations++;
             if(iterations === backDist)
@@ -203,6 +216,8 @@ class NpcCar {
                     index = checkingRoad.takenSegments.length - 1;
                 }
             }
+            if(checkingRoad.takenSegments[index + i] === undefined)
+                console.log("6u6mar");
             if(checkingRoad.takenSegments[index][checkFacing ? "right" : "left"] === this)
                 checkingRoad.takenSegments[index][checkFacing ? "right" : "left"] = null;
             else
@@ -329,6 +344,8 @@ class NpcCar {
                         }
                         return length;
                     }
+                    case roadPointTypes.sameChunkTerminating:
+                        return minSafeDist;
                 }
             }
             if(checkingRoad.takenSegments[i] === undefined)

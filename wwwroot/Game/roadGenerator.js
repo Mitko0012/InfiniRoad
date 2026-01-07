@@ -497,7 +497,7 @@ let tileTypes = Object.freeze({
                             prevIndex: i - 1,
                             nextChunkData: [
                                 chunk.xCenter + nextXOffset,
-                                chunk.zCenter + nextZOffset,
+                                chunk.zCenter + nextZOffset
                             ]
                         });
                     }
@@ -549,14 +549,13 @@ let tileTypes = Object.freeze({
             index = 0;
             while(true) {
                 chunk.interchangeRoads.push([]);
-                chunk.edgePoints.push(T_INTERSECTION["road" + String(index)].entryPoint);
+                chunk.edgePoints.push([T_INTERSECTION["road" + String(index)].entryPoint[0], T_INTERSECTION["road" + String(index)].entryPoint[1]]);
                 let vectorRotate = linearAlgebra.getVector4(chunk.edgePoints[index][0], 0, chunk.edgePoints[index][1], 0);
                 vectorRotate = linearAlgebra.multiplyMatrixAndVector(linearAlgebra.rotateAroundY(angle), vectorRotate);
                 chunk.edgePoints[index][0] = vectorRotate[0];
                 chunk.edgePoints[index][1] = vectorRotate[1];
                 chunk.edgePoints[index][0] += chunk.splineData.center.posX;
                 chunk.edgePoints[index][1] += chunk.splineData.center.posZ;
-                let rotationVec = linearAlgebra.getVector4(chunk.edgePoints[index][0], 0, chunk.edgePoints[index][1], 0);
                 for(let contiuningDirection = 0; contiuningDirection < chunk.interchange.type.options; contiuningDirection++) {
                     let reconstructedRoad = {
                         pointSegments: {},
