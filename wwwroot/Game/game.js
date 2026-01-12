@@ -98,18 +98,25 @@ onUpdate = () => {
         currentCars.splice(indicesToRemove[i], 1);
     }
 
-    while(currentCars.length < carsPerLevel) {
-        let activeChunksAsList = activeChunks.values();
-        let chunk = activeChunksAsList[Math.round(Math.random() * activeChunksAsList.length)];
-        while(true) {
-            let road = chunk.roads[Math.round(Math.random() * chunk.roads.length)];
-            let segmentIndex = Math.round(Math.random() * road.takenSegments.length);
-            let segment = road.takenSegments[]
+    while (currentCars.length < carsPerLevel) {
+        let activeChunksAsList = Object.values(activeChunks);
+        while (true) {
+            let chunk = activeChunksAsList[Math.round(Math.random() * (activeChunksAsList.length - 1))];
+            if (chunk.roads === undefined)
+                continue;
+            let road = chunk.roads[Math.round(Math.random() * (chunk.roads.length - 1))];
+            if (road === undefined)
+                console.log("debug");
+            let segmentPos = Math.round(Math.random() * road.totalLength);
+            let facing = (Math.random() < 0.5);
+            let segment = walkOnRoad(road, segmentPos, facing);
+            let occupation = road.takenSegments[segment.index][facing ? "left" : "right"];
+            if (occupation === null || occupation === undefined) {
+                currentCars.push(new NpcCar(chunk, road, segmentPos, facing, 2));
+                break;
+            }
         }
     }
-
-    rDownOnLast = keysDown["r"];
-    tDownOnLast = keysDown["t"];
 }
 
 start("drawing-canvas");
