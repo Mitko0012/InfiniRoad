@@ -13,6 +13,9 @@ let camSpeed = 20;
 let facingVector = linearAlgebra;
 let roadTexture;
 
+const carsPerLevel = 20;
+let totalCars = 0;
+
 resourcesToLoad["terrainVert"] = {type: "text", source: "Game/Shaders/terrainVert.glsl"};
 resourcesToLoad["terrainFrag"] = {type: "text", source: "Game/Shaders/terrainFrag.glsl"};
 resourcesToLoad["roadVert"] = {type: "text", source: "Game/Shaders/roadVert.glsl"};
@@ -95,11 +98,15 @@ onUpdate = () => {
         currentCars.splice(indicesToRemove[i], 1);
     }
 
-    // Spawn new cars on key press
-    if(keysDown["r"] && !rDownOnLast)
-        currentCars.push(new NpcCar(chunks["0 0"], chunks["0 0"].roads[0], 2, false, 2));
-    if(keysDown["t"] && !tDownOnLast)
-        currentCars.push(new NpcCar(chunks["0 0"], chunks["0 0"].roads[0], 2, false, 8));
+    while(currentCars.length < carsPerLevel) {
+        let activeChunksAsList = activeChunks.values();
+        let chunk = activeChunksAsList[Math.round(Math.random() * activeChunksAsList.length)];
+        while(true) {
+            let road = chunk.roads[Math.round(Math.random() * chunk.roads.length)];
+            let segmentIndex = Math.round(Math.random() * road.takenSegments.length);
+            let segment = road.takenSegments[]
+        }
+    }
 
     rDownOnLast = keysDown["r"];
     tDownOnLast = keysDown["t"];

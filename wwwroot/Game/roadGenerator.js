@@ -539,7 +539,7 @@ let tileTypes = Object.freeze({
             }
             let sideVec = linearAlgebra.getVector2(sidePoint.posX - chunk.splineData.center.posX, sidePoint.posZ - chunk.splineData.center.posZ);
             sideVec = linearAlgebra.normalizeVec2(sideVec);
-            let angle = Math.atan2(sideVec[1], sideVec[0]) + Math.PI;
+            let angle = Math.atan2(-sideVec[1], sideVec[0]);
             chunk.interchange = {
                 type: T_INTERSECTION,
                 angle
@@ -557,6 +557,9 @@ let tileTypes = Object.freeze({
                 chunk.edgePoints[index][0] += chunk.splineData.center.posX;
                 chunk.edgePoints[index][1] += chunk.splineData.center.posZ;
                 for(let contiuningDirection = 0; contiuningDirection < chunk.interchange.type.options; contiuningDirection++) {
+                    if(index === 0 && contiuningDirection === 1) {
+                        console.log("debugica");
+                    }
                     let reconstructedRoad = {
                         pointSegments: {},
                         points: [],

@@ -116,6 +116,7 @@ class NpcCar {
                             }
                     }
                     let direction = Math.round(Math.random() * (this.currChunk.interchange.type.options - 1));
+                    console.log(interchangeRoadIndex + " " + direction);
                     this.pointIndex = point.lengthTaken;
                     this.currRoad = this.currChunk.interchangeRoads[interchangeRoadIndex][direction];
                     this.roadHistory.push(this.currRoad);
