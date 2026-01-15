@@ -547,6 +547,7 @@ let tileTypes = Object.freeze({
             chunk.edgePoints = [];
             let interchangeMat = linearAlgebra.rotateAroundY(chunk.interchange.angle);
             index = 0;
+            let nonPriorityIndex = Math.round(Math.random() * 2);
             while(true) {
                 chunk.interchangeRoads.push([]);
                 chunk.edgePoints.push([T_INTERSECTION["road" + String(index)].entryPoint[0], T_INTERSECTION["road" + String(index)].entryPoint[1]]);
@@ -556,6 +557,8 @@ let tileTypes = Object.freeze({
                 chunk.edgePoints[index][1] = vectorRotate[1];
                 chunk.edgePoints[index][0] += chunk.splineData.center.posX;
                 chunk.edgePoints[index][1] += chunk.splineData.center.posZ;
+                if(index === nonPriorityIndex)
+                    chunk.nonPriorityPoint = [chunk.edgePoints[index][0], chunk.edgePoints[index][1]];
                 for(let contiuningDirection = 0; contiuningDirection < chunk.interchange.type.options; contiuningDirection++) {
                     if(index === 0 && contiuningDirection === 1) {
                         console.log("debugica");

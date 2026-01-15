@@ -48,6 +48,7 @@ onStart = () => {
     terrainShader = drawingData.createShaderConfig(resourcesToLoad["terrainVert"].value, resourcesToLoad["terrainFrag"].value);
     roadShader = drawingData.createShaderConfig(resourcesToLoad["roadVert"].value, resourcesToLoad["roadFrag"].value);
     roadTexture = drawingData.textureFromImage(resourcesToLoad["roadTexture"].value);
+    carMesh = drawingData.parseObj(resourcesToLoad["carModel"].value, true, true, false);
 }
 
 onUpdate = () => {
@@ -107,9 +108,11 @@ onUpdate = () => {
             let road = chunk.roads[Math.round(Math.random() * (chunk.roads.length - 1))];
             if (road === undefined)
                 console.log("debug");
-            let segmentPos = Math.round(Math.random() * road.totalLength);
+            let segmentPos = Math.random() * road.totalLength;
             let facing = (Math.random() < 0.5);
             let segment = walkOnRoad(road, segmentPos, facing);
+            if(road.takenSegments[segment.segment.index] === undefined)
+                console.log("e");
             let occupation = road.takenSegments[segment.index][facing ? "left" : "right"];
             if (occupation === null || occupation === undefined) {
                 currentCars.push(new NpcCar(chunk, road, segmentPos, facing, 2));
