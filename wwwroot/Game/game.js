@@ -14,7 +14,6 @@ let facingVector = linearAlgebra;
 let roadTexture;
 
 const carsPerLevel = 20;
-let totalCars = 0;
 
 resourcesToLoad["terrainVert"] = {type: "text", source: "Game/Shaders/terrainVert.glsl"};
 resourcesToLoad["terrainFrag"] = {type: "text", source: "Game/Shaders/terrainFrag.glsl"};
@@ -49,6 +48,7 @@ onStart = () => {
     roadShader = drawingData.createShaderConfig(resourcesToLoad["roadVert"].value, resourcesToLoad["roadFrag"].value);
     roadTexture = drawingData.textureFromImage(resourcesToLoad["roadTexture"].value);
     carMesh = drawingData.parseObj(resourcesToLoad["carModel"].value, true, true, false);
+    carShaderProgram = drawingData.createShaderConfig(resourcesToLoad["carVert"].value, resourcesToLoad["carFrag"].value);
 }
 
 onUpdate = () => {
@@ -111,9 +111,7 @@ onUpdate = () => {
             let segmentPos = Math.random() * road.totalLength;
             let facing = (Math.random() < 0.5);
             let segment = walkOnRoad(road, segmentPos, facing);
-            if(road.takenSegments[segment.segment.index] === undefined)
-                console.log("e");
-            let occupation = road.takenSegments[segment.index][facing ? "left" : "right"];
+            let occupation = road.takenSegments[segment.segment.index][facing ? "left" : "right"];
             if (occupation === null || occupation === undefined) {
                 currentCars.push(new NpcCar(chunk, road, segmentPos, facing, 2));
                 break;

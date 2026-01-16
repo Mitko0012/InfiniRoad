@@ -11,6 +11,7 @@ const segmentSize = 1;
 let chunksToCollapse = [];
 let terrainShader;
 let roadShader;
+const maxDist = 5;
 roadChunks = chunks;
 
 function registerChunk(xCenter, zCenter) {
@@ -254,39 +255,6 @@ function generateGeometry(chunk) {
     return drawingData.createMesh([3, 3], drawData, elemData);
 }
 
-function clampRegVert(v, point) {
-    const distance = 1.7;
-    if(v[0][0] <= minX || v[0][0] >= maxX) {
-        v[0][0] = point[0];
-        if(v[0][2] < v[1][2])
-            v[0][2] = point[1] - distance;
-        else
-            v[0][2] = point[1] + distance;
-    }
-    if(v[1][0] <= minX || v[1][0] >= maxX) {
-        v[1][0] = point[0];
-        if(v[1][2] < v[0][2])
-            v[1][2] = point[1] - distance;
-        else
-            v[1][2] = point[1] + distance;
-    }
-    if(v[0][2] <= minZ || v[0][2] >= maxZ) {
-        if(v[0][0] < v[1][0])
-            v[0][0] = point[0] - distance;
-        else
-            v[0][0] = point[0] + distance;
-        v[0][2] = point[1];
-    } 
-    if(v[1][2] <= minZ || v[1][2] >= maxZ) {
-        if(v[1][0] < v[0][0])
-            v[1][0] = point[0] - distance;
-        else
-            v[1][0] = point[0] + distance;
-        v[1][2] = point[1];
-    }
-    return v;
-}
-
 function clampStartVert(v, point) {
     const distance = 1.7;
     if(point[0] - minX < 0.0001) {
@@ -330,51 +298,6 @@ function clampStartVert(v, point) {
     return v;
 }
 
-function clampEndVert(v, point) {
-    const distance = 1.7;
-    if(point[0] - minX < 0.0001 || maxX - point[0] < 0.0001) {
-        v[0][0] = point[0];
-        v[1][0] = point[0];
-        if(v[0][2] < v[1][2]) {
-            v[0][2] = point[1] - distance;
-            v[1][2] = point[1] + distance;
-        }
-        else {
-            v[0][2] = point[1] + distance;
-            v[1][2] = point[1] - distance;
-        }
-    }
-    if(point[1] - minZ < 0.001) {
-        if(v[0][0] < v[1][0]) {
-            v[0][0] = point[0] + distance;
-            v[1][0] = point[0] - distance;
-        }
-        else {
-            v[0][0] = point[0] - distance;
-            v[1][0] = point[0] + distance;
-        }
-        v[0][2] = point[1];
-        v[1][2] = point[1];
-    } 
-    if(maxZ - point[1] < 0.001) {
-        if(v[0][0] < v[1][0]) {
-            v[0][0] = point[0] - distance;
-            v[1][0] = point[0] + distance;
-        }
-        else {
-            v[0][0] = point[0] + distance;
-            v[1][0] = point[0] - distance;
-        }
-        v[0][2] = point[1];
-        v[1][2] = point[1]
-    }
-    return v;
-}
-
-function clampSideTIntersection() {
-    
-}
-
 function clampEndTIntesection(interchange, point, center) {
     let edgeVecs = [
         [0, -1.7],
@@ -410,13 +333,19 @@ function generateRoadGeometry(chunk) {
     let vertices = [];
     for(let path of chunk.splineData.paths) {
         let prevPoint = path.divisions[0];
-        let prevPrevPoint = path.divisions[0];
+        let prevPrevPoint = [path.divisions[0][0], path.divisions[0][1]];
+        if(equalFloatNumbers(prevPrevPoint[0], minX))
+            prevPrevPoint[0]--;
+        else if(equalFloatNumbers(prevPrevPoint[0], maxX))
+            prevPrevPoint[0]++;
+        else if(equalFloatNumbers(prevPrevPoint[1], minZ))
+            prevPrevPoint[1]--;
+        else if(equalFloatNumbers(prevPrevPoint[1], maxZ))
+            prevPrevPoint[1]++;
         let prevPointVertices = [
             [prevPoint[0], temporaryY, prevPoint[1]],
             [prevPoint[0], temporaryY, prevPoint[1]]
         ];
-        prevPointVertices[0][1] = temporaryY;
-        prevPointVertices[1][1] = temporaryY;
         prevPointVertices = clampStartVert(prevPointVertices, prevPoint);
         let texturePos = 1;
         let posIncreasing = false;
@@ -440,6 +369,26 @@ function generateRoadGeometry(chunk) {
                 avg = dirPrev;
             let avgDir = linearAlgebra.normalizeVec2(avg);
             let perp = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(-avgDir[1], avgDir[0]));
+            let endPoint;
+            if(i < path.divisions.length / 2 || (path.divisions[path.divisions.length - 1][0] != minX || path.divisions[path.divisions.length - 1][0] != maxX || path.divisions[path.divisions.length - 1][1] != minZ || path.divisions[path.divisions.length - 1][0] != maxZ))
+                endPoint = path.divisions[0];
+            else
+                endPoint = path.divisions[path.divisions.length - 1];
+            let distanceToEdge = Math.sqrt(Math.pow(endPoint[0] - point[0], 2) + Math.pow(endPoint[1] - point[1], 2));
+            if(distanceToEdge <= maxDist) {
+                let minAngle;
+                if(equalFloatNumbers(endPoint[0], minX))
+                    minAngle = Math.PI / 2;
+                else if(equalFloatNumbers(endPoint[0], maxX))
+                    minAngle = Math.PI + Math.PI / 2;
+                else if(equalFloatNumbers(endPoint[1], minZ))
+                    minAngle = Math.PI;
+                else
+                    minAngle = 0;
+                let edgeNormal = linearAlgebra.getVector2(Math.cos(minAngle), Math.sin(minAngle));
+                let t = distanceToEdge / maxDist; 
+                perp = linearAlgebra.normalizeVec2(linearAlgebra.getVector2((perp[0] - edgeNormal[0]) * t + edgeNormal[0], (perp[1] - edgeNormal[1]) * t + edgeNormal[1]));
+            }
             if (prevNormal !== null) {
                 let dot = prevNormal[0] * perp[0] + prevNormal[1] * perp[1];
                 if (dot < 0) {
@@ -460,16 +409,11 @@ function generateRoadGeometry(chunk) {
                 console.log("");
             if(i === path.divisions.length - 1) {
                 switch(chunk.tileType) {
-                    case tileTypes.STRAIGHT.index:
-                        pointVertices = clampEndVert(pointVertices, point);
-                        break;
                     case tileTypes.T_INTERSECTION.index:
                         pointVertices = clampEndTIntesection(chunk.interchange, point, chunk.splineData.center);
                         break;
                 }
             }
-            else
-                pointVertices = clampRegVert(pointVertices, point);
             let base = vertices.length / 5;
             vertices.push(prevPointVertices[0][0]);
             vertices.push(prevPointVertices[0][1]);

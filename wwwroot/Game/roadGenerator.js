@@ -415,24 +415,24 @@ let tileTypes = Object.freeze({
                 if(point.posX === minX) {
                     minXGen = minX + distance;
                     maxXGen = chunk.splineData.center.posX - distance; 
-                    minZGen = chunk.splineData.center.posZ;
-                    maxZGen = chunk.splineData.center.posZ;
+                    minZGen = point.posZ;
+                    maxZGen = point.posZ;
                 }
                 else if(point.posX === maxX) {
                     minXGen = chunk.splineData.center.posX + distance;
                     maxXGen = maxX - distance; 
-                    minZGen = chunk.splineData.center.posZ;
-                    maxZGen = chunk.splineData.center.posZ;
+                    minZGen = point.posZ;
+                    maxZGen = point.posZ;
                 }
                 else if(point.posZ === minZ) {
-                    minXGen = chunk.splineData.center.posX;
-                    maxXGen = chunk.splineData.center.posX;
+                    minXGen = point.posX;
+                    maxXGen = point.posX;
                     minZGen = minZ + distance;
                     maxZGen = chunk.splineData.center.posZ - distance; 
                 }
                 else if(point.posZ === maxZ) {
-                    minXGen = chunk.splineData.center.posX;
-                    maxXGen = chunk.splineData.center.posX;
+                    minXGen = point.posX;
+                    maxXGen = point.posX;
                     minZGen = chunk.splineData.center.posZ + distance;
                     maxZGen = maxZ - distance;
                 }
