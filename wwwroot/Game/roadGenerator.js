@@ -407,7 +407,7 @@ let tileTypes = Object.freeze({
             chunk.hasInit = true;
             chunk.tileType = tileTypes.T_INTERSECTION.index;
             for(let point of Object.values(chunk.pointData)) {
-                const distance = 6;
+                const distance = 4;
                 let minXGen;
                 let minZGen;
                 let maxXGen;

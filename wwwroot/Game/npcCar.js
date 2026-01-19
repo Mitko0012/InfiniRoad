@@ -4,6 +4,7 @@ const backDist = 1;
 const minSafeDist = 7;
 const minVisibleDist = 5;
 const minAllowedDivergion = 0.4;
+const tolerance = 3;
 let carMesh;
 let carShaderProgram; 
 
@@ -51,13 +52,13 @@ class NpcCar {
                 case roadPointTypes.nextChunkTerminating: 
                     let toMoveX = 0;
                     let toMoveZ = 0;
-                    if(endPoint.posX === minX)
+                    if(equalFloatNumbers(endPoint.posX, minX))
                         toMoveX = -1;
-                    if(endPoint.posX === maxX)
+                    if(equalFloatNumbers(endPoint.posX, maxX))
                         toMoveX = 1;
-                    if(endPoint.posZ === minZ)
+                    if(equalFloatNumbers(endPoint.posZ, minZ))
                         toMoveZ = -1;
-                    if(endPoint.posZ === maxZ)
+                    if(equalFloatNumbers(endPoint.posZ, maxZ))
                         toMoveZ = 1;
                     let nextChunk = chunks[String(this.currChunk.xCenter + toMoveX) + " " + String(this.currChunk.zCenter + toMoveZ)];
                     if(nextChunk === undefined || nextChunk.isActive === false) {
@@ -90,9 +91,9 @@ class NpcCar {
                                         startChunk = nextChunk;
                                         end = this.pointIndex + 1.3;
                                         if(index === 0)
-                                            startFacing = false;
-                                        else
                                             startFacing = true;
+                                        else
+                                            startFacing = false;
                                     }
                                     else {
                                         endRoad = road;
@@ -282,6 +283,7 @@ class NpcCar {
             index--;
         else
             index++;
+        let collectedTolerance = 0;
         while(true) {
             if(index < 0 || index >= checkingRoad.takenSegments.length) {
                 let oldPoint = checkFacing? checkingRoad.points[0] : checkingRoad.points[checkingRoad.points.length - 1]; 
@@ -310,8 +312,10 @@ class NpcCar {
             }
             if(checkingRoad.takenSegments[index][checkFacing ? "right" : "left"] === this)
                 checkingRoad.takenSegments[index][checkFacing ? "right" : "left"] = null;
-            else
+            else if(collectedTolerance > tolerance)
                 break;
+            else
+                collectedTolerance++;
             if(checkFacing)
                 index--;
             else
@@ -325,12 +329,12 @@ class NpcCar {
         let translationMatrix = linearAlgebra.getTranslationMatrix(this.currChunk.xCenter * 16 + this.currPoint[0], 0.3, this.currChunk.zCenter * 16 + this.currPoint[1]);
         if(drawingData.getBoundShaderProgram() !== carShaderProgram) {
             carShaderProgram.bind();
-            carShaderProgram.setUniform("transformationMatrix", linearAlgebra.formatMatrix(linearAlgebra.multiplyMatrices(translationMatrix, rotationMatirx)));
-            carShaderProgram.setUniform("cameraMatrix", linearAlgebra.formatMatrix(camMatrix));
-            carShaderProgram.setUniform("projectionMatrix", linearAlgebra.formatMatrix(projMatrix));
-            carShaderProgram.setUniform("uSampler", this.texture);
             carMesh.bind();
+            carShaderProgram.setUniform("uSampler", this.texture);
         }
+        carShaderProgram.setUniform("transformationMatrix", linearAlgebra.formatMatrix(linearAlgebra.multiplyMatrices(translationMatrix, rotationMatirx)));
+        carShaderProgram.setUniform("cameraMatrix", linearAlgebra.formatMatrix(camMatrix));
+        carShaderProgram.setUniform("projectionMatrix", linearAlgebra.formatMatrix(projMatrix));
         gl.drawElements(gl.TRIANGLES, carMesh.getVertexCount(), gl.UNSIGNED_SHORT, 0);
     }
 

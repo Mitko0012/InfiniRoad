@@ -370,14 +370,16 @@ function generateRoadGeometry(chunk) {
             let avgDir = linearAlgebra.normalizeVec2(avg);
             let perp = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(-avgDir[1], avgDir[0]));
             let endPoint;
-            if(i < path.divisions.length / 2 || (path.divisions[path.divisions.length - 1][0] != minX || path.divisions[path.divisions.length - 1][0] != maxX || path.divisions[path.divisions.length - 1][1] != minZ || path.divisions[path.divisions.length - 1][0] != maxZ))
+            if(i < path.divisions.length / 2)
                 endPoint = path.divisions[0];
             else
                 endPoint = path.divisions[path.divisions.length - 1];
             let distanceToEdge = Math.sqrt(Math.pow(endPoint[0] - point[0], 2) + Math.pow(endPoint[1] - point[1], 2));
             if(distanceToEdge <= maxDist) {
                 let minAngle;
-                if(equalFloatNumbers(endPoint[0], minX))
+                if(chunk.tileType === tileTypes.T_INTERSECTION.index && endPoint === path.divisions[path.divisions.length - 1])
+                    minAngle = Math.atan2(endPoint[0] - chunk.splineData.center.posX, endPoint[1] - chunk.splineData.center.posZ)
+                else if(equalFloatNumbers(endPoint[0], minX))
                     minAngle = Math.PI / 2;
                 else if(equalFloatNumbers(endPoint[0], maxX))
                     minAngle = Math.PI + Math.PI / 2;
@@ -405,15 +407,6 @@ function generateRoadGeometry(chunk) {
             pointVertices[0][2] = point[1] - scalingVector[1];
             pointVertices[1][0] = point[0] + scalingVector[0]; 
             pointVertices[1][2] = point[1] + scalingVector[1];
-            if(i === path.divisions.length - 2 && chunk.xCenter === 0 && chunk.zCenter === 0)
-                console.log("");
-            if(i === path.divisions.length - 1) {
-                switch(chunk.tileType) {
-                    case tileTypes.T_INTERSECTION.index:
-                        pointVertices = clampEndTIntesection(chunk.interchange, point, chunk.splineData.center);
-                        break;
-                }
-            }
             let base = vertices.length / 5;
             vertices.push(prevPointVertices[0][0]);
             vertices.push(prevPointVertices[0][1]);

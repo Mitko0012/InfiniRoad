@@ -13,7 +13,7 @@ let camSpeed = 20;
 let facingVector = linearAlgebra;
 let roadTexture;
 
-const carsPerLevel = 20;
+const carsPerLevel = 50;
 
 resourcesToLoad["terrainVert"] = {type: "text", source: "Game/Shaders/terrainVert.glsl"};
 resourcesToLoad["terrainFrag"] = {type: "text", source: "Game/Shaders/terrainFrag.glsl"};
@@ -102,7 +102,7 @@ onUpdate = () => {
     while (currentCars.length < carsPerLevel) {
         let activeChunksAsList = Object.values(activeChunks);
         while (true) {
-            let chunk = activeChunksAsList[Math.round(Math.random() * (activeChunksAsList.length - 1))];
+            let chunk = activeChunksAsList[Math.round((activeChunksAsList.length - 1) * Math.random())];
             if (chunk.roads === undefined)
                 continue;
             let road = chunk.roads[Math.round(Math.random() * (chunk.roads.length - 1))];
