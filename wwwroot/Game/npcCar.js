@@ -387,17 +387,45 @@ class NpcCar {
                         }
                         break;
                     case roadPointTypes.interchangeTerminating: {
+                        let carPos = this.currRoad.points[this.index];
                         let index = currentlyFacing? checkingRoad.points.length - 2 : 1;
                         let followingRoad = checkingRoad.points[index];
-                        let startDegree = Math.atan2(followingRoad.posZ - endPoint.posZ, followingRoad.posX - endPoint.posZ);
-                        let length = 0;
-                        let carPos = this.currRoad.points[this.index];
                         if(this.direction === null || this.direction === undefined)
-                            this.direction = Math.round(Math.random() * 2);
+                            this.direction = Math.round(Math.random());
                         let isOnPriorityPoint = !(equalFloatNumbers(endPoint.posX, checkingChunk.nonPriorityPoint[0])
                         && equalFloatNumbers(endPoint.posZ, checkingChunk.nonPriorityPoint[1]));
-                        if(isOnPriorityPoint)
-                            return minSafeDist;
+                        if(isOnPriorityPoint) {
+                            let downWardVec = linearAlgebra.getVector2(0, 1);
+                            let regVec = linearAlgebra.getVector2(endPoint.posX - checkingChunk.splineData.center.posX, endPoint.posZ - checkingChunk.splineData.center.posZ);
+                            let degreeDiff = Math.atan2(downWardVec[1], downWardVec[0]) - Math.atan2(regVec[1], regVec[0]);
+                            for(let roadGroup of checkingChunk.interchangeRoads) {
+                                if(equalFloatNumbers(roadGroup[0].points[0].posX, endPoint.posX) && equalFloatNumbers(roadGroup[0].points[0].posZ, endPoint.posZ)) {
+                                    if(roadGroup[this.direction] === undefined)
+                                        console.log("6u6mar");
+                                    let continuingPoint = roadGroup[this.direction].points[roadGroup[this.direction].points.length - 1];
+                                    let priorityPoint;
+                                    for(let road of roadGroup)
+                                        if(!(equalFloatNumbers(road.points[road.points.length - 1].posX, checkingChunk.nonPriorityPoint[0]) && equalFloatNumbers(road.points[road.points.length - 1].posZ, checkingChunk.nonPriorityPoint[1]))) {
+                                            priorityPoint = road.points[road.points.length - 1];
+                                            break;
+                                        }
+                                    if(continuingPoint === priorityPoint)
+                                        return minSafeDist;
+                                    let contVec = linearAlgebra.getVector2(continuingPoint.posX - checkingChunk.splineData.center.posX, continuingPoint.posZ - checkingChunk.splineData.center.posZ);
+                                    let appliedContAngle = Math.atan2(contVec[1], contVec[0]) + degreeDiff;
+                                    let appliedContPoint = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(Math.cos(appliedContAngle), Math.sin(appliedContAngle)));
+                                    let priorVec = linearAlgebra.getVector2(priorityPoint.posX - checkingChunk.splineData.center.posX, priorityPoint.posZ - checkingChunk.splineData.center.posZ);
+                                    let appliedPriorAngle = Math.atan2(priorVec[1], priorVec[0]) + degreeDiff;
+                                    let appliedPriorPoint = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(Math.cos(appliedPriorAngle), Math.sin(appliedPriorAngle)));
+                                    if(appliedPriorPoint[0] < appliedContPoint[0])
+                                        break;
+                                    else
+                                        return minSafeDist;
+                                }
+                                else
+                                    continue;                 
+                            }
+                        }
                         let freeRoads = true;
                         for(let road of checkingChunk.roads) {
                             if(equalFloatNumbers(road.points[road.points.length - 1].posX, endPoint.posX) && equalFloatNumbers(road.points[road.points.length - 1].posZ, endPoint.posZ))
@@ -411,6 +439,7 @@ class NpcCar {
                         }
                         if(freeRoads)
                             return minSafeDist;
+                        let length = 0;
                         while(!equalFloatNumbers(followingRoad.posX, carPos.posX) && !equalFloatNumbers(followingRoad.posZ, carPos.posZ)) {
                             if(currentlyFacing)
                                 index--;
