@@ -388,7 +388,14 @@ function generateRoadGeometry(chunk) {
                 else
                     minAngle = 0;
                 let edgeNormal = linearAlgebra.getVector2(Math.cos(minAngle), Math.sin(minAngle));
-                let t = distanceToEdge / maxDist; 
+                if (prevNormal !== null) {
+                    let dot = prevNormal[0] * edgeNormal[0] + prevNormal[1] * edgeNormal[1];
+                    if (dot < 0) {
+                        edgeNormal[0] *= -1;
+                        edgeNormal[1] *= -1;
+                    }
+                }
+                let t = distanceToEdge / maxDist;
                 perp = linearAlgebra.normalizeVec2(linearAlgebra.getVector2((perp[0] - edgeNormal[0]) * t + edgeNormal[0], (perp[1] - edgeNormal[1]) * t + edgeNormal[1]));
             }
             if (prevNormal !== null) {
@@ -404,8 +411,7 @@ function generateRoadGeometry(chunk) {
             pointVertices[0][1] = temporaryY;
             pointVertices[1][1] = temporaryY;
             if(i === path.divisions.length - 1 && chunk.tileType === tileTypes.T_INTERSECTION.index && equalFloatNumbers(point[0], chunk.nonPriorityPoint[0]) && equalFloatNumbers(point[1], chunk.nonPriorityPoint[1])) {
-                pointVertices[0][1] = 2;
-                pointVertices[1][1] = 2;
+               
             }
             pointVertices[0][0] = point[0] - scalingVector[0]; 
             pointVertices[0][2] = point[1] - scalingVector[1];
@@ -443,42 +449,22 @@ function generateRoadGeometry(chunk) {
             vertices.push(pointVertices[1][2]);
             vertices.push(1);
             vertices.push(texturePos);
-            vertices.push(prevPointVertices[0][0]);
-            vertices.push(prevPointVertices[0][1] + 1);
-            vertices.push(prevPointVertices[0][2]);
-            vertices.push(0);
-            vertices.push(texturePos);
-            vertices.push(prevPointVertices[1][0]);
-            vertices.push(prevPointVertices[1][1] + 2);
-            vertices.push(prevPointVertices[1][2]);
-            vertices.push(1);
-            vertices.push(texturePos);        
-            vertices.push(prevPointVertices[0][0] + 0.1);
-            vertices.push(prevPointVertices[0][1] + 1);
-            vertices.push(prevPointVertices[0][2] + 0.1);
-            vertices.push(0);
-            vertices.push(texturePos);
-            vertices.push(prevPointVertices[1][0] + 0.1);
-            vertices.push(prevPointVertices[1][1] + 2);
-            vertices.push(prevPointVertices[1][2] + 0.1);
-            vertices.push(1);
-            vertices.push(texturePos);
             elements.push(base);
             elements.push(base + 1);
             elements.push(base + 2);
             elements.push(base + 1);
             elements.push(base + 2);
             elements.push(base + 3);
-            elements.push(base + 4);
-            elements.push(base + 5);
-            elements.push(base + 6);
-            elements.push(base + 5);
-            elements.push(base + 6);
-            elements.push(base + 7);
             prevPointVertices = pointVertices;
             prevPrevPoint = [...prevPoint];
             prevPoint = [...point];
         }
+    }
+    if(chunk.tileType === tileTypes.T_INTERSECTION) {
+        // To implement
+        // let interVertices = [-1, 0, ];
+        // let interElems = [];
+        // chunk.interchangeGeometry = drawingData.createMesh()
     }
     chunk.roadGeometryLength = elements.length;
     chunk.roadGeometry = drawingData.createMesh([3, 2], vertices, elements);

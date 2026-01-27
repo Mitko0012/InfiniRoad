@@ -13,7 +13,7 @@ let camSpeed = 20;
 let facingVector = linearAlgebra;
 let roadTexture;
 
-const carsPerLevel = 50;
+const carsPerLevel = 20;
 
 resourcesToLoad["terrainVert"] = {type: "text", source: "Game/Shaders/terrainVert.glsl"};
 resourcesToLoad["terrainFrag"] = {type: "text", source: "Game/Shaders/terrainFrag.glsl"};
