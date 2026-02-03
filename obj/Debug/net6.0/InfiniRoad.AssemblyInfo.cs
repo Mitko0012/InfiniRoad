@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("InfiniRoad")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cc18032b97072be5651b4167de00cd9edf5fbdbc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6ad7db46f55c9e183601717e85014c5b8834a9bb")]
 [assembly: System.Reflection.AssemblyProductAttribute("InfiniRoad")]
 [assembly: System.Reflection.AssemblyTitleAttribute("InfiniRoad")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -6,8 +6,10 @@ const minVisibleDist = 5;
 const minAllowedDivergion = 0.4;
 const tolerance = 3;
 const carLength = 2;
+const lookForward = 1.4;
 let carMesh;
-let carShaderProgram; 
+let carTexture;
+let carShaderProgram;
 
 class NpcCar {
     constructor(chunk, road, posOnRoad, facing, speed) {
@@ -24,7 +26,6 @@ class NpcCar {
         this.dirVec = pv.dir;
         this.speed = speed;
         this.roadHistory = [road];
-        this.texture = drawingData.textureFromImage(resourcesToLoad["carTexture"].value);
         this.number = null;
     }
 
@@ -37,9 +38,9 @@ class NpcCar {
         let endFacing = this.facing;
         let startChunk = this.currChunk;
         let endChunk = this.currChunk;
-        if(this.pointIndex - 1.3 < 0 || this.pointIndex + 1.3 > this.currRoad.totalLength - 0.01) {
+        if(this.pointIndex - lookForward < 0 || this.pointIndex + lookForward > this.currRoad.totalLength - 0.01) {
             let endPoint;
-            if(this.pointIndex - 1.3 < 0)
+            if(this.pointIndex - lookForward < 0)
                 if(this.facing)
                     endPoint = this.currRoad.points[0];
                 else
@@ -63,13 +64,13 @@ class NpcCar {
                         toMoveZ = 1;
                     let nextChunk = chunks[String(this.currChunk.xCenter + toMoveX) + " " + String(this.currChunk.zCenter + toMoveZ)];
                     if(nextChunk === undefined || nextChunk.isActive === false) {
-                        if(this.pointIndex - 1.3 < 0) {
+                        if(this.pointIndex - lookForward < 0) {
                             end = 0;
-                            start = 2.6;
+                            start = lookForward * 2;
                         }
                         else {
                             end = this.currRoad.totalLength - 0.01;
-                            start = this.currRoad.totalLength - 2.6;
+                            start = this.currRoad.totalLength - lookForward * 2;
                         }
                         break;
                     }
@@ -86,11 +87,11 @@ class NpcCar {
                             || (equalFloatNumbers(point.posZ, endPoint.posZ) && (
                                 (equalFloatNumbers(point.posX, minX) && equalFloatNumbers(endPoint.posX, maxX))
                                 || (equalFloatNumbers(point.posX, maxX) && equalFloatNumbers(endPoint.posX, minX))))) {
-                                    if(this.pointIndex - 1.3 < 0) {
+                                    if(this.pointIndex - lookForward < 0) {
                                         startRoad = road;
-                                        start = 1.3 - this.pointIndex;
+                                        start = lookForward - this.pointIndex;
                                         startChunk = nextChunk;
-                                        end = this.pointIndex + 1.3;
+                                        end = this.pointIndex + lookForward;
                                         if(index === 0)
                                             startFacing = true;
                                         else
@@ -98,9 +99,9 @@ class NpcCar {
                                     }
                                     else {
                                         endRoad = road;
-                                        start = this.pointIndex - 1.3;
+                                        start = this.pointIndex - lookForward;
                                         endChunk = nextChunk;
-                                        end = 1.3 - (this.currRoad.totalLength - this.pointIndex);
+                                        end = lookForward - (this.currRoad.totalLength - this.pointIndex);
                                         if(index === 0)
                                             endFacing = true;
                                         else
@@ -112,22 +113,64 @@ class NpcCar {
                         }
                     }
                     break;
+                    case roadPointTypes.interchangeTerminating:
+                        for(let roadGroup of this.currChunk.interchangeRoads) {
+                            let startPoint = roadGroup[0].points[0];
+                            if(equalFloatNumbers(endPoint.posX, startPoint.posX) && equalFloatNumbers(endPoint.posZ, startPoint.posZ)) {
+                                if(this.direction === null || this.direction === undefined)
+                                    this.direction = Math.round(Math.random());
+                                let nextRoad = roadGroup[this.direction];
+                                if(this.pointIndex - lookForward < 0) {
+                                    startRoad = this.roadHistory[this.roadHistory.length - 2];
+                                    start = lookForward - this.pointIndex;
+                                    end = this.pointIndex + lookForward;
+                                    startFacing = false;
+                                }
+                                else {
+                                    endRoad = nextRoad;
+                                    start = this.pointIndex - lookForward;
+                                    end = lookForward - (this.currRoad.totalLength - this.pointIndex);
+                                    endFacing = true;
+                                }
+                                break;
+                            } 
+                        }
+                        break;
+                    case roadPointTypes.sameChunkTerminating:
+                        for(let road of this.currChunk.roads) {
+                            let contEndPoint = road.points[road.points.length - 1];
+                            if(equalFloatNumbers(contEndPoint.posX, endPoint.posX) && equalFloatNumbers(contEndPoint.posZ, endPoint.posZ)) {
+                                if(this.pointIndex - lookForward < 0) {
+                                    startRoad = road;
+                                    start = lookForward - this.pointIndex;
+                                    end = this.pointIndex + lookForward;
+                                    startFacing = false;
+                                }
+                                else {
+                                    endRoad = road;
+                                    start = this.pointIndex -lookForward;
+                                    end = lookForward - (this.currRoad.totalLength - this.pointIndex);
+                                    endFacing = false;
+                                }
+                            }
+                        }
+                        break;
                     default:
-                        if(this.pointIndex - 1.3 < 0) {
+                        if(this.pointIndex -lookForward < 0) {
                             end = 2.6;
                             start = 0;
                         }
                         else {
                             end = this.currRoad.totalLength - 0.01;
-                            start = this.currRoad.totalLength - 2.6;
+                            start = this.currRoad.totalLength - lookForward * 2;
                             end = this.currRoad.totalLength - 0.01;
-                            start = this.currRoad.totalLength - 2.6;
+                            start = this.currRoad.totalLength - lookForward * 2;
                         }
                 }
         }
         else {
-            start = this.pointIndex - 1.3;
-            end = this.pointIndex + 1.3;
+            start = this.pointIndex - lookForward;
+            end = this.pointIndex + lookForward;
         }
         let startPoint = walkOnRoad(startRoad, start, startFacing);
         let endPoint = walkOnRoad(endRoad, end, endFacing);
@@ -135,6 +178,8 @@ class NpcCar {
         endPoint.point[1] += endChunk.zCenter * 16;
         startPoint.point[0] += startChunk.xCenter * 16;
         startPoint.point[1] += startChunk.zCenter * 16;
+        this.startPoint = startPoint;
+        this.endPoint = endPoint;
         return {
             perp: linearAlgebra.scaleVector(linearAlgebra.normalizeVec2(linearAlgebra.getVector2(-(endPoint.point[1] - startPoint.point[1]), endPoint.point[0] - startPoint.point[0])), 0.6),
             dir: linearAlgebra.normalizeVec2(linearAlgebra.getVector2((endPoint.point[0] - startPoint.point[0]), (endPoint.point[1] - startPoint.point[1])))
@@ -200,17 +245,16 @@ class NpcCar {
                     let interchangeRoadIndex;
                     for(let i = 0; i < this.currChunk.interchangeRoads.length; i++) {
                         if(equalFloatNumbers(this.currChunk.interchangeRoads[i][0].points[0].posX, edgePoint.posX) &&
-                            equalFloatNumbers(this.currChunk.interchangeRoads[i][0].points[0].posZ, edgePoint.posZ)) {
-                                interchangeRoadIndex = i;
-                                break;
-                            }
+                        equalFloatNumbers(this.currChunk.interchangeRoads[i][0].points[0].posZ, edgePoint.posZ)) {
+                            interchangeRoadIndex = i;
+                            break;
+                        }
                     }
                     let direction = this.directon === undefined || this.direction === null? Math.round(Math.random() * (this.currChunk.interchange.type.options - 1)) : this.direction;
                     this.pointIndex = point.lengthTaken;
                     this.currRoad = this.currChunk.interchangeRoads[interchangeRoadIndex][direction];
                     this.roadHistory.push(this.currRoad);
                     this.facing = true;
-                    this.direction = null;
                     break;
                 case roadPointTypes.sameChunkTerminating:
                     for(let road of this.currChunk.roads) {
@@ -323,14 +367,14 @@ class NpcCar {
     }
 
     render() {
-        let angle = Math.atan2(this.dirVec[1], this.dirVec[0]); 
+        let angle = Number(Math.atan2(this.dirVec[1], this.dirVec[0]).toFixed(2)); 
         let rotationMatirx = linearAlgebra.rotateAroundY(Math.PI/2 - angle);
         let translationMatrix = linearAlgebra.getTranslationMatrix(this.currChunk.xCenter * 16 + this.currPoint[0], 0.3, this.currChunk.zCenter * 16 + this.currPoint[1]);
         if(drawingData.getBoundShaderProgram() !== carShaderProgram) {
             carShaderProgram.bind();
-            carMesh.bind();
-            carShaderProgram.setUniform("uSampler", this.texture);
+            carShaderProgram.setUniform("uSampler", carTexture);
         }
+        carMesh.bind();
         carShaderProgram.setUniform("transformationMatrix", linearAlgebra.formatMatrix(linearAlgebra.multiplyMatrices(translationMatrix, rotationMatirx)));
         carShaderProgram.setUniform("cameraMatrix", linearAlgebra.formatMatrix(camMatrix));
         carShaderProgram.setUniform("projectionMatrix", linearAlgebra.formatMatrix(projMatrix));

@@ -398,12 +398,11 @@ let tileTypes = Object.freeze({
             chunk.splineData = {};
             chunk.splineData.splines = [];
             chunk.splineData.paths = [];
-            let xCenter = Math.random() * 2 - 1;
-            let zCenter = Math.random() * 2 - 1;
             chunk.splineData.center = {
                 posX: Math.random() * 6 + -3, 
                 posZ: Math.random() * 6 + -3
             };
+            console.log(chunk.xCenter + " " + chunk.zCenter + " " + chunk.splineData.center.posX + " " + chunk.splineData.center.posZ);
             chunk.hasInit = true;
             chunk.tileType = tileTypes.T_INTERSECTION.index;
             for(let point of Object.values(chunk.pointData)) {
@@ -440,13 +439,13 @@ let tileTypes = Object.freeze({
                 let posZ = Math.random() * (maxZGen - minZGen) + minZGen;
                 let xOffset = 0;
                 let zOffset = 0;
-                if(point.posX === minX)
+                if(equalFloatNumbers(point.posX, minX))
                     xOffset = -1.7;
-                if(point.posX === maxX)
+                if(equalFloatNumbers(point.posX, maxX))
                     xOffset = 1.7;
-                if(point.posZ === minZ)
+                if(equalFloatNumbers(point.posZ, minZ))
                     zOffset = -1.7;
-                if(point.posZ === maxZ)
+                if(equalFloatNumbers(point.posZ, maxZ))
                     zOffset = 1.7;
                 chunk.splineData.splines.push(createSpline([[[point.posX, point.posZ], [posX, posZ], [chunk.splineData.center.posX + xOffset, chunk.splineData.center.posZ + zOffset]]]))    
             }
@@ -557,12 +556,7 @@ let tileTypes = Object.freeze({
                 chunk.edgePoints[index][1] = vectorRotate[1];
                 chunk.edgePoints[index][0] += chunk.splineData.center.posX;
                 chunk.edgePoints[index][1] += chunk.splineData.center.posZ;
-                if(index === nonPriorityIndex)
-                    chunk.nonPriorityPoint = [chunk.edgePoints[index][0], chunk.edgePoints[index][1]];
                 for(let contiuningDirection = 0; contiuningDirection < chunk.interchange.type.options; contiuningDirection++) {
-                    if(index === 0 && contiuningDirection === 1) {
-                        console.log("debugica");
-                    }
                     let reconstructedRoad = {
                         pointSegments: {},
                         points: [],
@@ -586,13 +580,18 @@ let tileTypes = Object.freeze({
                             reconstructedRoad.points[pointIndex].prevIndex = pointIndex - 1;
                         if(pointIndex < pointDatas.length - 1) {
                             reconstructedRoad.points[pointIndex].nextIndex = pointIndex;
-                            reconstructedRoad.points[pointIndex].type = roadPointTypes.middlePoint;
+                            if(pointIndex === 0)
+                                reconstructedRoad.points[pointIndex].type = roadPointTypes.sameChunkTerminating;
+                            else
+                                reconstructedRoad.points[pointIndex].type = roadPointTypes.middlePoint;
                         }
                         else {
                             reconstructedRoad.points[pointIndex].type = roadPointTypes.sameChunkTerminating;
                         }
                         pointIndex++;
                     }
+                    if(index === nonPriorityIndex)
+                        chunk.nonPriorityPoint = [reconstructedRoad.points[0].posX, reconstructedRoad.points[0].posZ];
                     for(let i = 0; i < reconstructedRoad.points.length - 1; i++) {
                         reconstructedRoad.pointSegments[i] = {
                             length: linearAlgebra.getVectorMagnitudeVec2(linearAlgebra.getVector2(

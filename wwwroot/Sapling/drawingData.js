@@ -25,7 +25,7 @@ let drawingData = (() => {
                         vertices.push([Number(data[1]), Number(data[2]), Number(data[3])]);
                     break;
                 case "vt":
-                    textureCoords.push([Number(data[1]), Number(data[2]), Number(data[3])]);
+                    textureCoords.push([Number(data[1]), Number(data[2])]);
                     break;
                 case "vn":
                     normals.push([Number(data[1]), Number(data[2]), Number(data[3])]);
@@ -116,8 +116,7 @@ let drawingData = (() => {
                 }
             },
             getVertexCount() {
-                let sum = layout.reduce((prev, cur) => prev + cur, 0);
-                return vertData.length / sum;
+                return elemData.length;
             }
         }
     }
@@ -137,7 +136,6 @@ let drawingData = (() => {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
     
         return texture;
     }

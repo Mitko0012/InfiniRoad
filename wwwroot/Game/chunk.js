@@ -11,8 +11,15 @@ const segmentSize = 1;
 let chunksToCollapse = [];
 let terrainShader;
 let roadShader;
+let nonPriorityShaderProgram;
+let priorityShaderProgram
+let priorityMesh;
+let nonPriorityMesh;
+let priorityTexture;
+let nonPriorityTexture;
 const maxDist = 5;
 roadChunks = chunks;
+const roadSignOffset = 1.8;
 
 function registerChunk(xCenter, zCenter) {
     chunks[String(xCenter) + " " + String(zCenter)] = {geometry: {}, pointData: {}, splineData: {}, isActive: false, xCenter, zCenter, hasInit: false} 
@@ -121,6 +128,49 @@ function drawChunk(chunk) {
     roadShader.setUniform("uSampler", roadTexture);
     chunk.roadGeometry.bind();
     gl.drawElements(gl.TRIANGLES, chunk.roadGeometryLength, gl.UNSIGNED_SHORT, 0);
+    if(chunk.tileType === tileTypes.T_INTERSECTION.index) {
+        roadShader.setUniform("uSampler", interchangeTexture);
+        let interTrnasform = linearAlgebra.multiplyMatrices(linearAlgebra.getTranslationMatrix(chunk.xCenter * chunkScale + chunk.splineData.center.posX, 0, chunk.zCenter * chunkScale + chunk.splineData.center.posZ), linearAlgebra.rotateAroundY(chunk.interchange.angle + Math.PI / 2));
+        roadShader.setUniform("transformationMatrix", linearAlgebra.formatMatrix(interTrnasform));
+        chunk.interchangeGeometry.bind();
+        gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+        let foundNonPrior = false;
+        for(let road of chunk.roads) {
+            let endPoint = road.points[road.points.length - 1];
+            if(equalFloatNumbers(endPoint.posX, chunk.nonPriorityPoint[0]) && equalFloatNumbers(endPoint.posZ, chunk.nonPriorityPoint[1])) {
+                let normalizedVec = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(-(chunk.splineData.center.posZ - endPoint.posZ), chunk.splineData.center.posX - endPoint.posX));
+                let moveVec = linearAlgebra.scaleVector(linearAlgebra.getVector4(normalizedVec[0], 0, normalizedVec[1], 1), roadSignOffset);
+                let translationMat = linearAlgebra.getTranslationMatrix(chunk.xCenter * 16 + endPoint.posX + moveVec[0], 0.1, chunk.zCenter * 16 + endPoint.posZ + moveVec[2]);
+                let transformMat = linearAlgebra.multiplyMatrices(translationMat, linearAlgebra.rotateAroundY(Math.atan2(moveVec[2], moveVec[0]) + Math.PI / 2));
+                nonPriorityShaderProgram.bind();
+                nonPriorityShaderProgram.setUniform("uSampler", nonPriorityTexture);
+                nonPriorityMesh.bind();
+                nonPriorityShaderProgram.setUniform("transformationMatrix", linearAlgebra.formatMatrix(transformMat));
+                nonPriorityShaderProgram.setUniform("cameraMatrix", linearAlgebra.formatMatrix(camMatrix));
+                nonPriorityShaderProgram.setUniform("projectionMatrix", linearAlgebra.formatMatrix(projMatrix));
+                nonPriorityShaderProgram.setUniform("lightDirection", processedSunDirection);
+                gl.drawElements(gl.TRIANGLES, nonPriorityMesh.getVertexCount(), gl.UNSIGNED_SHORT, 0);
+                foundNonPrior = true;
+            }
+            else {
+                let normalizedVec = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(-(chunk.splineData.center.posZ - endPoint.posZ), chunk.splineData.center.posX - endPoint.posX));
+                let moveVec = linearAlgebra.scaleVector(linearAlgebra.getVector4(normalizedVec[0], 0, normalizedVec[1], 1), roadSignOffset);
+                let translationMat = linearAlgebra.getTranslationMatrix(chunk.xCenter * 16 + endPoint.posX + moveVec[0], 0.1, chunk.zCenter * 16 + endPoint.posZ + moveVec[2]);
+                let transformMat = linearAlgebra.multiplyMatrices(translationMat, linearAlgebra.rotateAroundY(Math.atan2(moveVec[2], moveVec[0]) - Math.PI / 2));
+                priorityShaderProgram.bind();
+                priorityShaderProgram.setUniform("uSampler", priorityTexture);
+                priorityMesh.bind();
+                priorityShaderProgram.setUniform("transformationMatrix", linearAlgebra.formatMatrix(transformMat));
+                priorityShaderProgram.setUniform("cameraMatrix", linearAlgebra.formatMatrix(camMatrix));
+                priorityShaderProgram.setUniform("projectionMatrix", linearAlgebra.formatMatrix(projMatrix));
+                priorityShaderProgram.setUniform("lightDirection", processedSunDirection);
+                gl.drawElements(gl.TRIANGLES, priorityMesh.getVertexCount(), gl.UNSIGNED_SHORT, 0);
+                foundNonPrior = true;
+            }
+        }
+        if(!foundNonPrior)
+            console.log("6u6mar");
+    }
 }
 
 function getChunkPoint(value) {
@@ -460,11 +510,10 @@ function generateRoadGeometry(chunk) {
             prevPoint = [...point];
         }
     }
-    if(chunk.tileType === tileTypes.T_INTERSECTION) {
-        // To implement
-        // let interVertices = [-1, 0, ];
-        // let interElems = [];
-        // chunk.interchangeGeometry = drawingData.createMesh()
+    if(chunk.tileType === tileTypes.T_INTERSECTION.index) {
+        let interVertices = [-1.7, 0.1, -1.7, 0, 0, -1.7, 0.1, 1.7, 1, 0, 1.7, 0.1, -1.7, 0, 1, 1.7, 0.1, 1.7, 1, 1];
+        let interElemts = [0, 1, 2, 1, 2, 3];
+        chunk.interchangeGeometry = drawingData.createMesh([3, 2], interVertices, interElemts);
     }
     chunk.roadGeometryLength = elements.length;
     chunk.roadGeometry = drawingData.createMesh([3, 2], vertices, elements);
@@ -485,7 +534,7 @@ function walkOnRoad(road, point, goingForward) {
     while(true) {
         let segment = road.pointSegments[goingForward ? roadPoint.nextIndex : roadPoint.prevIndex];
         if(segment === undefined || point > road.totalLength)
-            return {lengthTaken: point - road.points.length}
+            return {lengthTaken: point - road.totalLength}
         let prevLength = currLength;
         currLength += segment.length;
         if(currLength > point) {

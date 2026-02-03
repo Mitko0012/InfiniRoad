@@ -12,18 +12,24 @@ let tDownOnLast = false;
 let camSpeed = 20;
 let facingVector = linearAlgebra;
 let roadTexture;
+let interchangeTexture;
 
-const carsPerLevel = 20;
+const carsPerLevel = 2;
 
 resourcesToLoad["terrainVert"] = {type: "text", source: "Game/Shaders/terrainVert.glsl"};
 resourcesToLoad["terrainFrag"] = {type: "text", source: "Game/Shaders/terrainFrag.glsl"};
 resourcesToLoad["roadVert"] = {type: "text", source: "Game/Shaders/roadVert.glsl"};
 resourcesToLoad["roadFrag"] = {type: "text", source: "Game/Shaders/roadFrag.glsl"};
-resourcesToLoad["carVert"] = {type: "text", source: "Game/Shaders/carVert.glsl"};
-resourcesToLoad["carFrag"] = {type: "text", source: "Game/Shaders/carFrag.glsl"};
+resourcesToLoad["modelVert"] = {type: "text", source: "Game/Shaders/modelVert.glsl"};
+resourcesToLoad["modelFrag"] = {type: "text", source: "Game/Shaders/modelFrag.glsl"};
 resourcesToLoad["roadTexture"] = {type: "image", source: "Textures/road_texture.png"};
+resourcesToLoad["tInterTexture"] = {type: "image", source: "Textures/t_interchange_texture.png"}
 resourcesToLoad["carModel"] = {type: "text", source: "Models/car.obj"};
 resourcesToLoad["carTexture"] = {type: "image", source: "Textures/car_texture.png"};
+resourcesToLoad["nonPriorityModel"] = {type: "text", source: "Models/non_priority_sign.obj"};
+resourcesToLoad["priorityModel"] = {type: "text", source: "Models/priority_sign.obj"};
+resourcesToLoad["priorityTexture"] = {type: "image", source: "Textures/priority_sign_texture.png"};
+resourcesToLoad["nonPriorityTexture"] = {type: "image", source: "Textures/non_priority_sign_texture.png"};
 
 let carsInitialized = false; // flag to spawn first two cars automatically
 
@@ -47,8 +53,16 @@ onStart = () => {
     terrainShader = drawingData.createShaderConfig(resourcesToLoad["terrainVert"].value, resourcesToLoad["terrainFrag"].value);
     roadShader = drawingData.createShaderConfig(resourcesToLoad["roadVert"].value, resourcesToLoad["roadFrag"].value);
     roadTexture = drawingData.textureFromImage(resourcesToLoad["roadTexture"].value);
-    carMesh = drawingData.parseObj(resourcesToLoad["carModel"].value, true, true, false);
-    carShaderProgram = drawingData.createShaderConfig(resourcesToLoad["carVert"].value, resourcesToLoad["carFrag"].value);
+    interchangeTexture = drawingData.textureFromImage(resourcesToLoad["tInterTexture"].value);
+    carMesh = drawingData.parseObj(resourcesToLoad["carModel"].value, true, true, true);
+    carTexture = drawingData.textureFromImage(resourcesToLoad["carTexture"].value);
+    nonPriorityMesh = drawingData.parseObj(resourcesToLoad["nonPriorityModel"].value, true, true, true);
+    priorityMesh = drawingData.parseObj(resourcesToLoad["priorityModel"].value, true, true);
+    priorityTexture = drawingData.textureFromImage(resourcesToLoad["priorityTexture"].value);
+    nonPriorityTexture = drawingData.textureFromImage(resourcesToLoad["nonPriorityTexture"].value);
+    nonPriorityShaderProgram = drawingData.createShaderConfig(resourcesToLoad["modelVert"].value, resourcesToLoad["modelFrag"].value);
+    priorityShaderProgram = drawingData.createShaderConfig(resourcesToLoad["modelVert"].value, resourcesToLoad["modelFrag"].value);
+    carShaderProgram = drawingData.createShaderConfig(resourcesToLoad["modelVert"].value, resourcesToLoad["modelFrag"].value);
 }
 
 onUpdate = () => {
