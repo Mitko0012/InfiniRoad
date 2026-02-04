@@ -18,6 +18,8 @@ class NpcCar {
         this.currChunk = chunk;
         this.roadHistory.push(road);
         this.facing = facing;
+        if(road === undefined)
+            console.log("6u6mar");
         this.currPoint = walkOnRoad(road, posOnRoad, facing);
         this.pointIndex = posOnRoad;
         this.isActive = true;
@@ -80,6 +82,7 @@ class NpcCar {
                             road.points[road.points.length - 1]
                         ];
                         let index = 0;
+                        let foundRoad = false;
                         for(let point of endPoints) {
                             if((equalFloatNumbers(point.posX, endPoint.posX) && (
                                 (equalFloatNumbers(point.posZ, minZ) && equalFloatNumbers(endPoint.posZ, maxZ))
@@ -88,6 +91,7 @@ class NpcCar {
                                 (equalFloatNumbers(point.posX, minX) && equalFloatNumbers(endPoint.posX, maxX))
                                 || (equalFloatNumbers(point.posX, maxX) && equalFloatNumbers(endPoint.posX, minX))))) {
                                     if(this.pointIndex - lookForward < 0) {
+                                        foundRoad = true;
                                         startRoad = road;
                                         start = lookForward - this.pointIndex;
                                         startChunk = nextChunk;
@@ -98,6 +102,7 @@ class NpcCar {
                                             startFacing = false;
                                     }
                                     else {
+                                        foundRoad = true;
                                         endRoad = road;
                                         start = this.pointIndex - lookForward;
                                         endChunk = nextChunk;
@@ -121,10 +126,16 @@ class NpcCar {
                                     this.direction = Math.round(Math.random());
                                 let nextRoad = roadGroup[this.direction];
                                 if(this.pointIndex - lookForward < 0) {
-                                    startRoad = this.roadHistory[this.roadHistory.length - 2];
-                                    start = lookForward - this.pointIndex;
-                                    end = this.pointIndex + lookForward;
-                                    startFacing = false;
+                                    if(this.roadHistory.length > 1) {
+                                        startRoad = this.roadHistory[this.roadHistory.length - 2];
+                                        start = lookForward - this.pointIndex;
+                                        end = this.pointIndex + lookForward;
+                                        startFacing = false;
+                                    }
+                                    else {
+                                        start = this.pointIndex;
+                                        end = this.pointIndex + lookForward;
+                                    }
                                 }
                                 else {
                                     endRoad = nextRoad;
@@ -172,6 +183,10 @@ class NpcCar {
             start = this.pointIndex - lookForward;
             end = this.pointIndex + lookForward;
         }
+        if(startRoad === undefined)
+            console.log("6u6mar");
+        if(endRoad === undefined)
+            console.log("6u6mar");
         let startPoint = walkOnRoad(startRoad, start, startFacing);
         let endPoint = walkOnRoad(endRoad, end, endFacing);
         endPoint.point[0] += endChunk.xCenter * 16;
@@ -191,13 +206,16 @@ class NpcCar {
         let vel = maxSpeed * (freeDist / minSafeDist);
         vel = Math.min(vel, this.speed);
         this.pointIndex += (vel * 0.02);
+        if(this.currRoad === undefined)
+            console.log("6u6mar");
         let point = walkOnRoad(this.currRoad, this.pointIndex, this.facing);
         if(point.lengthTaken !== undefined) {
             let edgePoint = this.currRoad.points[this.facing ? this.currRoad.points.length - 1 : 0];
+            let pv;
             switch(edgePoint.type) {
                 case roadPointTypes.nextChunkTerminating:
                     let nextChunk = chunks[String(edgePoint.nextChunkData[0]) + " " + String(edgePoint.nextChunkData[1])];
-                    if(nextChunk !== undefined && nextChunk.geometry !== null) {
+                    if(nextChunk !== undefined && nextChunk.geometry !== null && nextChunk.isActive) {
                         this.currChunk = nextChunk;
                         for(let road of nextChunk.roads) {
                             let startPoint = road.points[0];
@@ -239,6 +257,8 @@ class NpcCar {
                         this.isActive = false;
                         return;
                     }
+                    point = walkOnRoad(this.currRoad, this.pointIndex, this.facing);
+                    this.index = point.segment.index;
                     break;
                 case roadPointTypes.interchangeTerminating:
                     edgePoint = this.currRoad.points[this.currRoad.points.length - 1];
@@ -255,6 +275,8 @@ class NpcCar {
                     this.currRoad = this.currChunk.interchangeRoads[interchangeRoadIndex][direction];
                     this.roadHistory.push(this.currRoad);
                     this.facing = true;
+                    point = walkOnRoad(this.currRoad, this.pointIndex, this.facing);
+                    this.index = point.segment.index;
                     break;
                 case roadPointTypes.sameChunkTerminating:
                     for(let road of this.currChunk.roads) {
@@ -264,18 +286,21 @@ class NpcCar {
                             this.facing = false;
                             this.roadHistory.push(this.currRoad);
                             this.pointIndex = point.lengthTaken;
+                            if(this.currRoad === undefined)
+                            console.log("6u6mar");
+                            point = walkOnRoad(this.currRoad, this.pointIndex, this.facing);
+                            this.index = point.segment.index;
                             break;
                         }
                     }
             }
         }
-        point = walkOnRoad(this.currRoad, this.pointIndex, this.facing);
-        this.index = point.segment.index;
         let pv = this.getPerpDirVec();
         this.perpVec = pv.perp;
         this.dirVec = pv.dir;
         let walked = walkOnRoad(this.currRoad, this.pointIndex, this.facing);
         let index = point.segment.index + (this.facing ? -1 : 1);
+        this.index = point.segment.index;
         this.currPoint = linearAlgebra.getVector2(walked.point[0] + this.perpVec[0], walked.point[1] + this.perpVec[1]);
         this.currRoad.takenSegments[point.segment.index][this.facing ? "right" : "left"] = this;    
         let checkingRoad = this.currRoad;
@@ -446,11 +471,11 @@ class NpcCar {
                                     let continuingPoint = roadGroup[this.direction].points[roadGroup[this.direction].points.length - 1];
                                     let priorityPoint;
                                     for(let road of roadGroup)
-                                        if(!equalFloatNumbers(road.points[road.points.length - 1].posX, checkingChunk.nonPriorityPoint[0] && !equalFloatNumbers(road.points[road.points.length - 1].posZ, checkingChunk.nonPriorityPoint[1]))) {
+                                        if(!equalFloatNumbers(road.points[road.points.length - 1].posX, checkingChunk.nonPriorityPoint[0]) || !equalFloatNumbers(road.points[road.points.length - 1].posZ, checkingChunk.nonPriorityPoint[1])) {
                                             priorityPoint = road.points[road.points.length - 1];
                                             break;
                                         }
-                                    if(continuingPoint === priorityPoint)
+                                    if(equalFloatNumbers(continuingPoint.posX, priorityPoint.posX) && equalFloatNumbers(continuingPoint.posZ, priorityPoint.posZ))
                                         return minSafeDist;
                                     let contVec = linearAlgebra.getVector2(continuingPoint.posX - checkingChunk.splineData.center.posX, continuingPoint.posZ - checkingChunk.splineData.center.posZ);
                                     let appliedContAngle = Math.atan2(contVec[1], contVec[0]) + degreeDiff;
@@ -458,11 +483,10 @@ class NpcCar {
                                     let priorVec = linearAlgebra.getVector2(priorityPoint.posX - checkingChunk.splineData.center.posX, priorityPoint.posZ - checkingChunk.splineData.center.posZ);
                                     let appliedPriorAngle = Math.atan2(priorVec[1], priorVec[0]) + degreeDiff;
                                     let appliedPriorPoint = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(Math.cos(appliedPriorAngle), Math.sin(appliedPriorAngle)));
-                                    if(appliedPriorPoint[0] < appliedContPoint[0]) {
-                                        break;
-                                    }
-                                    else
+                                    if(appliedPriorPoint[0] < appliedContPoint[0])
                                         return minSafeDist;
+                                    else
+                                        break;
                                 }
                                 else
                                     continue;                 
@@ -502,6 +526,8 @@ class NpcCar {
                                 currentlyFacing = !data.facing;
                                 index = currentlyFacing? checkingRoad.points.length - 1 : 0; 
                             }
+                            if(checkingRoad.pointSegments === undefined)
+                                console.log("WHY");
                             length += checkingRoad.pointSegments[index].length;
                             if(length >= minSafeDist)
                                 return minSafeDist;

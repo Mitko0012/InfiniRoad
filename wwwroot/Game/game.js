@@ -14,7 +14,7 @@ let facingVector = linearAlgebra;
 let roadTexture;
 let interchangeTexture;
 
-const carsPerLevel = 2;
+const carsPerLevel = 60;
 
 resourcesToLoad["terrainVert"] = {type: "text", source: "Game/Shaders/terrainVert.glsl"};
 resourcesToLoad["terrainFrag"] = {type: "text", source: "Game/Shaders/terrainFrag.glsl"};
@@ -117,7 +117,7 @@ onUpdate = () => {
         let activeChunksAsList = Object.values(activeChunks);
         while (true) {
             let chunk = activeChunksAsList[Math.round((activeChunksAsList.length - 1) * Math.random())];
-            if (chunk.roads === undefined)
+            if (chunk.roads === undefined || chunk.roads.length === 0)
                 continue;
             let road = chunk.roads[Math.round(Math.random() * (chunk.roads.length - 1))];
             if (road === undefined)

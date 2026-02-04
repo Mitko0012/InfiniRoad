@@ -520,6 +520,8 @@ function generateRoadGeometry(chunk) {
 }
 
 function walkOnRoad(road, point, goingForward) {
+    if(road === undefined)
+        console.log("");
     let roadPoint;
     let currLength = 0;
     let currPointIndex;
