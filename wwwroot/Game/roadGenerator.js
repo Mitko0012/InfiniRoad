@@ -399,41 +399,41 @@ let tileTypes = Object.freeze({
             chunk.splineData.splines = [];
             chunk.splineData.paths = [];
             chunk.splineData.center = {
-                posX: Math.random() * 6 + -3, 
-                posZ: Math.random() * 6 + -3
+                posX: Math.random() + -1, 
+                posZ: Math.random() + -1
             };
-            console.log(chunk.xCenter + " " + chunk.zCenter + " " + chunk.splineData.center.posX + " " + chunk.splineData.center.posZ);
             chunk.hasInit = true;
             chunk.tileType = tileTypes.T_INTERSECTION.index;
             for(let point of Object.values(chunk.pointData)) {
-                const distance = 4;
+                const nearDistance = 2;
+                const farDistance = 4;
                 let minXGen;
                 let minZGen;
                 let maxXGen;
                 let maxZGen;
                 if(point.posX === minX) {
-                    minXGen = minX + distance;
-                    maxXGen = chunk.splineData.center.posX - distance; 
-                    minZGen = point.posZ;
-                    maxZGen = point.posZ;
+                    minXGen = minX + nearDistance;
+                    maxXGen = minX + farDistance; 
+                    minZGen = chunk.splineData.center.posZ;
+                    maxZGen = chunk.splineData.center.posZ;
                 }
                 else if(point.posX === maxX) {
-                    minXGen = chunk.splineData.center.posX + distance;
-                    maxXGen = maxX - distance; 
-                    minZGen = point.posZ;
-                    maxZGen = point.posZ;
+                    minXGen = maxX - farDistance;
+                    maxXGen = maxX - nearDistance; 
+                    minZGen = chunk.splineData.center.posZ;
+                    maxZGen = chunk.splineData.center.posZ;
                 }
                 else if(point.posZ === minZ) {
-                    minXGen = point.posX;
-                    maxXGen = point.posX;
-                    minZGen = minZ + distance;
-                    maxZGen = chunk.splineData.center.posZ - distance; 
+                    minXGen = chunk.splineData.center.posX;
+                    maxXGen = chunk.splineData.center.posX;
+                    minZGen = minZ + nearDistance;
+                    maxZGen = minZ + farDistance; 
                 }
                 else if(point.posZ === maxZ) {
-                    minXGen = point.posX;
-                    maxXGen = point.posX;
-                    minZGen = chunk.splineData.center.posZ + distance;
-                    maxZGen = maxZ - distance;
+                    minXGen = chunk.splineData.center.posX;
+                    maxXGen = chunk.splineData.center.posX;
+                    minZGen = maxZ - farDistance;
+                    maxZGen = maxZ - nearDistance;
                 }
                 let posX = Math.random() * (maxXGen - minXGen) + minXGen;
                 let posZ = Math.random() * (maxZGen - minZGen) + minZGen;

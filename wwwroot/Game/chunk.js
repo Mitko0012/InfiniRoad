@@ -207,10 +207,10 @@ function generateGeometry(chunk) {
     chunk.rightZHeightData = [];
     chunk.topXHeightData = [];
     chunk.bottomXHeightData = [];
-    for(let x = -8; x < 7; x += segmentSize) {
+    for(let x = -8; x < 8; x += segmentSize) {
         let rowData = [];
         vertexData.push(rowData);
-        for(let z = -8; z < 7; z += segmentSize) {
+        for(let z = -8; z < 8; z += segmentSize) {
             let xValues = [x, x + segmentSize, x, x + segmentSize];
             let zValues = [z, z, z + segmentSize, z + segmentSize];
             for(let i = 0; i < xValues.length; i++) {
@@ -267,9 +267,9 @@ function generateGeometry(chunk) {
     }
     let drawData = [];
     let normals = {};
-    for(let i = -8; i <= 7; i += segmentSize) {
+    for(let i = -8; i <= 8; i += segmentSize) {
         let rowData = [];
-        for(let j = -8; j <= 7; j += segmentSize) {
+        for(let j = -8; j <= 8; j += segmentSize) {
             let currentVertex = vertices[i + " " + j];
             let prevNeighbourX = vertices[currentVertex[0] - segmentSize + " " + currentVertex[2]];
             let nextNeighbourX = vertices[currentVertex[0] + segmentSize + " " + currentVertex[2]];
