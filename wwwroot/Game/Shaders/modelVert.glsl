@@ -9,14 +9,13 @@ attribute vec3 aNormal;
 
 varying highp vec2 vTexturePos;
 varying highp vec3 vLightDirection;
-varying lowp vec3 vNormal;
+varying highP vec3 vNormal;
 
 void main() {
     vec4 convertedPos = vec4(position[0], position[1], position[2], 1);
     gl_Position = projectionMatrix * cameraMatrix * transformationMatrix * convertedPos;
     vTexturePos = aTexturePos;
-    vec4 convertedNormal = vec4(vNormal.x, vNormal.y, vNormal.z, 1);
-    vec4 appliedNormal = transformationMatrix * convertedNormal;
-    vNormal = vec3(appliedNormal.x, appliedNormal.y, appliedNormal.z);
-    vLightDirection = lightDirection;
+    vec3 appliedNormal = normalize(mat3(transformationMatrix) * aNormal);
+    vNormal = appliedNormal;
+    vLightDirection = normalize(mat3(transformationMatrix) * lightDirection);
 }

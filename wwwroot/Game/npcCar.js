@@ -407,14 +407,17 @@ class NpcCar {
         let rotationMatirx = linearAlgebra.rotateAroundY(Math.PI/2 - angle);
         let translationMatrix = linearAlgebra.getTranslationMatrix(this.currChunk.xCenter * 16 + this.currPoint[0], 0.3, this.currChunk.zCenter * 16 + this.currPoint[1]);
         if(drawingData.getBoundShaderProgram() !== carShaderProgram) {
-            carShaderProgram.bind();
+            terrainShader.bind();
             carShaderProgram.setUniform("uSampler", carTexture);
         }
         carMesh.bind();
+        let processedSunDirection = linearAlgebra.normalizeVec3(sunDirection);
+        processedSunDirection = linearAlgebra.getVector3(-sunDirection[0], -sunDirection[1], -sunDirection[2]);
+        carShaderProgram.setUniform("lightDirection", processedSunDirection);
         carShaderProgram.setUniform("transformationMatrix", linearAlgebra.formatMatrix(linearAlgebra.multiplyMatrices(translationMatrix, rotationMatirx)));
         carShaderProgram.setUniform("cameraMatrix", linearAlgebra.formatMatrix(camMatrix));
         carShaderProgram.setUniform("projectionMatrix", linearAlgebra.formatMatrix(projMatrix));
-        gl.drawElements(gl.TRIANGLES, carMesh.getVertexCount(), gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.TRIANGLES, carMesh.getIndexCount(), gl.UNSIGNED_SHORT, 0);
     }
 
     checkFree(index) {

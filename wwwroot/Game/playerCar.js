@@ -26,7 +26,7 @@ function slowDown() {
 }
 
 function turn(rightTurning) {
-    let toTurn = wheelTurnSpeed * regularTurn * deltaTime * (rightTurning ? -1 : 1);
+    let toTurn = wheelTurnSpeed * regularTurn * deltaTime * (rightTurning ? 1 : -1);
     if(turningAngle + toTurn > maxAngle)
         turningAngle = maxAngle;
     else if(turningAngle + toTurn < -maxAngle)

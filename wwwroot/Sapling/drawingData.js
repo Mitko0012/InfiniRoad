@@ -45,8 +45,8 @@ let drawingData = (() => {
                             vertexData.push(vertices[values[0]][5] !== undefined? vertices[values[0]][5] : 0);
                         }
                         if(takeTexture) {
-                            vertexData.push(values[1] !== -1? textureCoords[values[1]][0] : 0);
-                            vertexData.push(values[1] !== -1? textureCoords[values[1]][1] : 0);
+                            vertexData.push(values[1] !== -1 ? textureCoords[values[1]][0] : 0);
+                            vertexData.push(values[1] !== -1 ? textureCoords[values[1]][1] : 0);
                         }
                         if(takeNormal) {
                            vertexData.push(values[2] !== -1? normals[values[2]][0] : 0);
@@ -115,7 +115,7 @@ let drawingData = (() => {
                     gl.elemBuffer = null;
                 }
             },
-            getVertexCount() {
+            getIndexCount() {
                 return elemData.length;
             }
         }
@@ -128,10 +128,11 @@ let drawingData = (() => {
         const srcFormat = gl.RGBA;
         const srcType = gl.UNSIGNED_BYTE;
         const level = 0;
-            gl.texImage2D(
-                gl.TEXTURE_2D, level, internalFormat,
-                srcFormat, srcType, image
-            );
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(
+            gl.TEXTURE_2D, level, internalFormat,
+            srcFormat, srcType, image
+        );
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);

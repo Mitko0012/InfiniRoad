@@ -2,8 +2,8 @@ colorToClear.blue = 1;
 colorToClear.green = 0.5;
 const camVel = 6;
 const lookRatio = 0.5;
-let inputX = 0;
-let inputZ = 0;
+let addedAngleX = 0;
+let addedAngleY = 0;
 let currentCars = [];
 
 let rDownOnLast = false;
@@ -31,20 +31,21 @@ resourcesToLoad["priorityModel"] = {type: "text", source: "Models/priority_sign.
 resourcesToLoad["priorityTexture"] = {type: "image", source: "Textures/priority_sign_texture.png"};
 resourcesToLoad["nonPriorityTexture"] = {type: "image", source: "Textures/non_priority_sign_texture.png"};
 
-let carsInitialized = false; // flag to spawn first two cars automatically
+let carsInitialized = false;
 
 onStart = () => {
     const canvas = document.getElementById("drawing-canvas");
 
-    // window.addEventListener("mousemove", (event) => {
-    //     const deltaX = (event.movementX / canvas.width) * 180;
-    //     const deltaY = (event.movementY / canvas.height) * 180;
+    window.addEventListener("mousemove", (event) => {
+        const deltaX = (event.movementX / canvas.width) * 180;
+        const deltaY = (event.movementY / canvas.height) * 180;
 
-    //     camAngleY -= deltaX;
-    //     camAngleX -= deltaY;
+        addedAngleY -= deltaX;
+        addedAngleX -= deltaY;
 
-    //     camAngleX = Math.max(-89, Math.min(89, camAngleX));
-    // });
+        addedAngleX = Math.max(-89, Math.min(89, addedAngleX));
+        addedAngleY = Math.max(-89, Math.min(89, addedAngleY));
+    });
 
     sunDirection[0] = 0.3; 
     camAngleY = 0;
@@ -54,10 +55,10 @@ onStart = () => {
     roadShader = drawingData.createShaderConfig(resourcesToLoad["roadVert"].value, resourcesToLoad["roadFrag"].value);
     roadTexture = drawingData.textureFromImage(resourcesToLoad["roadTexture"].value);
     interchangeTexture = drawingData.textureFromImage(resourcesToLoad["tInterTexture"].value);
-    carMesh = drawingData.parseObj(resourcesToLoad["carModel"].value, true, true, true);
+    carMesh = drawingData.parseObj(resourcesToLoad["carModel"].value, false, true, true);
     carTexture = drawingData.textureFromImage(resourcesToLoad["carTexture"].value);
-    nonPriorityMesh = drawingData.parseObj(resourcesToLoad["nonPriorityModel"].value, true, true, true);
-    priorityMesh = drawingData.parseObj(resourcesToLoad["priorityModel"].value, true, true);
+    nonPriorityMesh = drawingData.parseObj(resourcesToLoad["nonPriorityModel"].value, false, true, true);
+    priorityMesh = drawingData.parseObj(resourcesToLoad["priorityModel"].value, false, true, true);
     priorityTexture = drawingData.textureFromImage(resourcesToLoad["priorityTexture"].value);
     nonPriorityTexture = drawingData.textureFromImage(resourcesToLoad["nonPriorityTexture"].value);
     nonPriorityShaderProgram = drawingData.createShaderConfig(resourcesToLoad["modelVert"].value, resourcesToLoad["modelFrag"].value);
@@ -66,37 +67,6 @@ onStart = () => {
 }
 
 onUpdate = () => {
-
-    // Camera input
-    // if(keysDown["w"]) inputZ = -1;
-    // else if(keysDown["s"]) inputZ = 1;
-    // else inputZ = 0;
-
-    // if(keysDown["a"]) inputX = -1;
-    // else if(keysDown["d"]) inputX = 1;
-    // else inputX = 0;
-
-    // let forward = linearAlgebra.normalizeVec3(linearAlgebra.getVector3(
-    //     Math.sin(camAngleY * Math.PI / 180) * Math.cos(camAngleX * Math.PI / 180),
-    //     Math.sin(camAngleX * Math.PI / 180),
-    //     Math.cos(camAngleY * Math.PI / 180) * Math.cos(camAngleX * Math.PI / 180)
-    // ));
-
-    // let right = linearAlgebra.normalizeVec3(
-    //     linearAlgebra.crossVector3(linearAlgebra.getVector3(0, 1, 0), forward)
-    // );
-
-    // let movementVec = linearAlgebra.scaleVector(
-    //     linearAlgebra.normalizeVec3(
-    //         linearAlgebra.addVectors(
-    //             linearAlgebra.scaleVector(forward, inputZ),
-    //             linearAlgebra.scaleVector(right, inputX)
-    //         )
-    //     ), camVel * deltaTime
-    // );
-
-    // camPosX += movementVec[0];
-    // camPosZ += movementVec[2];
 
     if(keysDown["w"]) {accelerate();}
     if(keysDown["a"]) {turn(false);}
@@ -108,7 +78,8 @@ onUpdate = () => {
     camPosY = 6;
     camPosZ = playerCarZ;
 
-    camAngleY = currRotation * 180 / Math.PI - 90;
+    camAngleX = addedAngleX;
+    camAngleY = -(currRotation * 180 / Math.PI) - 90 + addedAngleY;
 
     updateMatrices();
     updateChunk();

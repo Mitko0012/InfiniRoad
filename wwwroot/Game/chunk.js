@@ -149,7 +149,7 @@ function drawChunk(chunk) {
                 nonPriorityShaderProgram.setUniform("cameraMatrix", linearAlgebra.formatMatrix(camMatrix));
                 nonPriorityShaderProgram.setUniform("projectionMatrix", linearAlgebra.formatMatrix(projMatrix));
                 nonPriorityShaderProgram.setUniform("lightDirection", processedSunDirection);
-                gl.drawElements(gl.TRIANGLES, nonPriorityMesh.getVertexCount(), gl.UNSIGNED_SHORT, 0);
+                gl.drawElements(gl.TRIANGLES, nonPriorityMesh.getIndexCount(), gl.UNSIGNED_SHORT, 0);
                 foundNonPrior = true;
             }
             else {
@@ -164,7 +164,7 @@ function drawChunk(chunk) {
                 priorityShaderProgram.setUniform("cameraMatrix", linearAlgebra.formatMatrix(camMatrix));
                 priorityShaderProgram.setUniform("projectionMatrix", linearAlgebra.formatMatrix(projMatrix));
                 priorityShaderProgram.setUniform("lightDirection", processedSunDirection);
-                gl.drawElements(gl.TRIANGLES, priorityMesh.getVertexCount(), gl.UNSIGNED_SHORT, 0);
+                gl.drawElements(gl.TRIANGLES, priorityMesh.getIndexCount(), gl.UNSIGNED_SHORT, 0);
                 foundNonPrior = true;
             }
         }

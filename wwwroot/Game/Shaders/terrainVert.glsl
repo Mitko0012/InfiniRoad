@@ -7,8 +7,9 @@ attribute lowp vec4 position;
 attribute highp vec3 normal;
 
 varying lowp vec4 color;
-varying highp vec3 vLightDirection;
 varying highp vec3 vNormal;
+varying highp vec3 vLightDirection;
+
 
 void main() {
     gl_Position = projectionMatrix * cameraMatrix * transformationMatrix * position;

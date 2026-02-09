@@ -5,6 +5,6 @@ varying highp vec3 vLightDirection;
 
 void main() {
     gl_FragColor = texture2D(uSampler, vTexturePos);
-    highp float light = dot(vNormal, vLightDirection);
+    highp float light = max(dot(normalize(vNormal), normalize(vLightDirection)), 0.0);
     gl_FragColor.rgb *= light;
 }
