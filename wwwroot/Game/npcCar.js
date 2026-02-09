@@ -529,9 +529,7 @@ class NpcCar {
                                 index++;
                             if(checkingRoad.pointSegments[index] === undefined) {
                                 let data = this.getNext(checkingRoad, followingRoad, checkingChunk);
-                                if(!this.isActive)
-                                    return minSafeDist;
-                                if(data.type !== roadPointTypes.nextChunkTerminating)
+                                if(data === undefined || data.type !== roadPointTypes.nextChunkTerminating)
                                     return minSafeDist;
                                 checkingRoad = data.nextRoad;
                                 endPoint = data.nextPoint;
@@ -624,6 +622,21 @@ class NpcCar {
                     facing
                 }
             }
+            case roadPointTypes.interchangeTerminating: 
+                for(let interchangeRoadGroup of chunk.interchangeRoads) {
+                    let continuingEndPoint = interchangeRoadGroup[0].points[0];
+                    if(this.direction === null || this.direction === undefined)
+                            this.direction = Math.round(Math.random());
+                    if(equalFloatNumbers(endPoint.posX, continuingPoint.posX) && equalFloatNumbers(endPoint.posZ, continuingEndPoint.posZ)) {
+                        return {
+                            type: roadPointTypes.interchangeTerminating,
+                            nextChunk: chunk,
+                            nextRoad: interchangeRoadGroup[this.direction],
+                            nextPoint: interchangeRoadGroup[this.direction][0],
+                            facing: true
+                        };
+                    }
+                }
         }
     }
 }

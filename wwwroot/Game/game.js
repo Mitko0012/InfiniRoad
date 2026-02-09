@@ -36,15 +36,15 @@ let carsInitialized = false; // flag to spawn first two cars automatically
 onStart = () => {
     const canvas = document.getElementById("drawing-canvas");
 
-    window.addEventListener("mousemove", (event) => {
-        const deltaX = (event.movementX / canvas.width) * 180;
-        const deltaY = (event.movementY / canvas.height) * 180;
+    // window.addEventListener("mousemove", (event) => {
+    //     const deltaX = (event.movementX / canvas.width) * 180;
+    //     const deltaY = (event.movementY / canvas.height) * 180;
 
-        camAngleY -= deltaX;
-        camAngleX -= deltaY;
+    //     camAngleY -= deltaX;
+    //     camAngleX -= deltaY;
 
-        camAngleX = Math.max(-89, Math.min(89, camAngleX));
-    });
+    //     camAngleX = Math.max(-89, Math.min(89, camAngleX));
+    // });
 
     sunDirection[0] = 0.3; 
     camAngleY = 0;
@@ -68,35 +68,47 @@ onStart = () => {
 onUpdate = () => {
 
     // Camera input
-    if(keysDown["w"]) inputZ = -1;
-    else if(keysDown["s"]) inputZ = 1;
-    else inputZ = 0;
+    // if(keysDown["w"]) inputZ = -1;
+    // else if(keysDown["s"]) inputZ = 1;
+    // else inputZ = 0;
 
-    if(keysDown["a"]) inputX = -1;
-    else if(keysDown["d"]) inputX = 1;
-    else inputX = 0;
+    // if(keysDown["a"]) inputX = -1;
+    // else if(keysDown["d"]) inputX = 1;
+    // else inputX = 0;
 
-    let forward = linearAlgebra.normalizeVec3(linearAlgebra.getVector3(
-        Math.sin(camAngleY * Math.PI / 180) * Math.cos(camAngleX * Math.PI / 180),
-        Math.sin(camAngleX * Math.PI / 180),
-        Math.cos(camAngleY * Math.PI / 180) * Math.cos(camAngleX * Math.PI / 180)
-    ));
+    // let forward = linearAlgebra.normalizeVec3(linearAlgebra.getVector3(
+    //     Math.sin(camAngleY * Math.PI / 180) * Math.cos(camAngleX * Math.PI / 180),
+    //     Math.sin(camAngleX * Math.PI / 180),
+    //     Math.cos(camAngleY * Math.PI / 180) * Math.cos(camAngleX * Math.PI / 180)
+    // ));
 
-    let right = linearAlgebra.normalizeVec3(
-        linearAlgebra.crossVector3(linearAlgebra.getVector3(0, 1, 0), forward)
-    );
+    // let right = linearAlgebra.normalizeVec3(
+    //     linearAlgebra.crossVector3(linearAlgebra.getVector3(0, 1, 0), forward)
+    // );
 
-    let movementVec = linearAlgebra.scaleVector(
-        linearAlgebra.normalizeVec3(
-            linearAlgebra.addVectors(
-                linearAlgebra.scaleVector(forward, inputZ),
-                linearAlgebra.scaleVector(right, inputX)
-            )
-        ), camVel * deltaTime
-    );
+    // let movementVec = linearAlgebra.scaleVector(
+    //     linearAlgebra.normalizeVec3(
+    //         linearAlgebra.addVectors(
+    //             linearAlgebra.scaleVector(forward, inputZ),
+    //             linearAlgebra.scaleVector(right, inputX)
+    //         )
+    //     ), camVel * deltaTime
+    // );
 
-    camPosX += movementVec[0];
-    camPosZ += movementVec[2];
+    // camPosX += movementVec[0];
+    // camPosZ += movementVec[2];
+
+    if(keysDown["w"]) {accelerate();}
+    if(keysDown["a"]) {turn(false);}
+    if(keysDown["d"]) {turn(true);}
+ 
+    carUpdate();
+
+    camPosX = playerCarX;
+    camPosY = 6;
+    camPosZ = playerCarZ;
+
+    camAngleY = currRotation * 180 / Math.PI - 90;
 
     updateMatrices();
     updateChunk();
