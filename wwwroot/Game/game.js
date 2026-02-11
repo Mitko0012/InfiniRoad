@@ -14,7 +14,7 @@ let facingVector = linearAlgebra;
 let roadTexture;
 let interchangeTexture;
 
-const carsPerLevel = 60;
+const carsPerLevel = 0;
 
 resourcesToLoad["terrainVert"] = {type: "text", source: "Game/Shaders/terrainVert.glsl"};
 resourcesToLoad["terrainFrag"] = {type: "text", source: "Game/Shaders/terrainFrag.glsl"};
@@ -69,13 +69,12 @@ onStart = () => {
 onUpdate = () => {
 
     if(keysDown["w"]) {accelerate();}
+    if(keysDown["s"]) {slowDown();}
     if(keysDown["a"]) {turn(false);}
     if(keysDown["d"]) {turn(true);}
- 
-    carUpdate();
 
     camPosX = playerCarX;
-    camPosY = 6;
+    camPosY = 0.7;
     camPosZ = playerCarZ;
 
     camAngleX = addedAngleX;
@@ -84,7 +83,8 @@ onUpdate = () => {
     updateMatrices();
     updateChunk();
 
-    // Update and render all cars
+    carUpdate();
+
     let indicesToRemove = [];
     for (let i = 0; i < currentCars.length; i++) {
         let car = currentCars[i];

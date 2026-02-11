@@ -7,8 +7,8 @@ let camAngleZ = 0;
 let camMatrix;
 let projMatrix;
 let fov = 45;
-let nearPlane = 0.001;
-let farPlane = 1000;
+const nearPlane = 0.1;
+const farPlane = 100;
 let sunDirection = linearAlgebra.getVector3(0, 1, 0);
 
 function updateMatrices() {

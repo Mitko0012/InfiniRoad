@@ -141,7 +141,10 @@ function drawChunk(chunk) {
                 let normalizedVec = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(-(chunk.splineData.center.posZ - endPoint.posZ), chunk.splineData.center.posX - endPoint.posX));
                 let moveVec = linearAlgebra.scaleVector(linearAlgebra.getVector4(normalizedVec[0], 0, normalizedVec[1], 1), roadSignOffset);
                 let translationMat = linearAlgebra.getTranslationMatrix(chunk.xCenter * 16 + endPoint.posX + moveVec[0], 0.1, chunk.zCenter * 16 + endPoint.posZ + moveVec[2]);
-                let transformMat = linearAlgebra.multiplyMatrices(translationMat, linearAlgebra.rotateAroundY(Math.atan2(moveVec[2], moveVec[0]) + Math.PI / 2));
+                let angle = Math.atan2(chunk.splineData.center.posZ - endPoint.posZ, chunk.splineData.center.posX - endPoint.posX);
+                if(angle < 0)
+                    angle = Math.PI + (angle * -1);
+                let transformMat = linearAlgebra.multiplyMatrices(translationMat, linearAlgebra.rotateAroundY(angle));
                 nonPriorityShaderProgram.bind();
                 nonPriorityShaderProgram.setUniform("uSampler", nonPriorityTexture);
                 nonPriorityMesh.bind();
@@ -156,7 +159,10 @@ function drawChunk(chunk) {
                 let normalizedVec = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(-(chunk.splineData.center.posZ - endPoint.posZ), chunk.splineData.center.posX - endPoint.posX));
                 let moveVec = linearAlgebra.scaleVector(linearAlgebra.getVector4(normalizedVec[0], 0, normalizedVec[1], 1), roadSignOffset);
                 let translationMat = linearAlgebra.getTranslationMatrix(chunk.xCenter * 16 + endPoint.posX + moveVec[0], 0.1, chunk.zCenter * 16 + endPoint.posZ + moveVec[2]);
-                let transformMat = linearAlgebra.multiplyMatrices(translationMat, linearAlgebra.rotateAroundY(Math.atan2(moveVec[2], moveVec[0]) - Math.PI / 2));
+                let angle = Math.atan2(chunk.splineData.center.posZ - endPoint.posZ, chunk.splineData.center.posX - endPoint.posX);
+                if(angle < 0)
+                    angle = Math.PI + (angle * -1);
+                let transformMat = linearAlgebra.multiplyMatrices(translationMat, linearAlgebra.rotateAroundY(angle));
                 priorityShaderProgram.bind();
                 priorityShaderProgram.setUniform("uSampler", priorityTexture);
                 priorityMesh.bind();

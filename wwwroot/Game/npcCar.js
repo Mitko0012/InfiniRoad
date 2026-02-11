@@ -407,7 +407,7 @@ class NpcCar {
         let rotationMatirx = linearAlgebra.rotateAroundY(Math.PI/2 - angle);
         let translationMatrix = linearAlgebra.getTranslationMatrix(this.currChunk.xCenter * 16 + this.currPoint[0], 0.3, this.currChunk.zCenter * 16 + this.currPoint[1]);
         if(drawingData.getBoundShaderProgram() !== carShaderProgram) {
-            terrainShader.bind();
+            carShaderProgram.bind();
             carShaderProgram.setUniform("uSampler", carTexture);
         }
         carMesh.bind();

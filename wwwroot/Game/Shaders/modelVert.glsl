@@ -9,7 +9,7 @@ attribute vec3 aNormal;
 
 varying highp vec2 vTexturePos;
 varying highp vec3 vLightDirection;
-varying highP vec3 vNormal;
+varying highp vec3 vNormal;
 
 void main() {
     vec4 convertedPos = vec4(position[0], position[1], position[2], 1);

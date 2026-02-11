@@ -163,6 +163,10 @@ let linearAlgebra = (() => {
         ]
     }
 
+    function vector2Distance(vec1, vec2) {
+        return Math.sqrt(Math.pow(vec2[0] - vec1[0], 2) + Math.pow(vec2[1] - vec1[1], 2));
+    }
+
     return {
         getVector2,
         getVector3,
@@ -185,6 +189,7 @@ let linearAlgebra = (() => {
         scaleVector,
         lerpVec2,
         getVectorMagnitudeVec2,
-        crossVector3
+        crossVector3,
+        vector2Distance
     };
 })();
