@@ -8,6 +8,8 @@ const stopTurningSpeed = 20;
 const minTurnSpeed = 0.5;
 const turnBackSpeed = 0.5;
 const wheelSlowSpeed = 10.5;
+const laneTolerance = 0.4;
+
 let turnedOnLast = false;
 
 let playerCarX = 0;
@@ -88,7 +90,7 @@ function getRoadData() {
         for(let segment of Object.values(road.pointSegments))
             if(lastSegment === undefined || 
                 linearAlgebra.vector2Distance(linearAlgebra.getVector2(road.points[segment.index].posX, road.points[segment.index].posZ), 
-                linearAlgebra.getVector2(lastRoad.points[lastSegment.index].posX, lastRoad.points[lastSegment.index].posZ)) < lastDistance) {
+                linearAlgebra.getVector2(relativeX, relativeZ)) < lastDistance) {
                     lastSegment = segment;
                     lastDistance = linearAlgebra.vector2Distance(linearAlgebra.getVector2(road.points[segment.index].posX, road.points[segment.index].posZ), 
                                     linearAlgebra.getVector2(relativeX, relativeZ));
@@ -106,8 +108,36 @@ function getRoadData() {
 function verifyCorrectness() {
     let roadData = getRoadData();
     let point = roadData.road.points[roadData.segment.index];
-    let otherPoint = roadData.road.points[roadData.segment.index + 1] === undefined? roadData.road.points[roadData.segment.index - 1] : roadData.road.points[roadData.segment.index + 1];
-    let triangleArea = 0.5 * Math.abs(point.posX * (otherPoint.posZ - roadData.relativeZ) + otherPoint.posX * (roadData.relativeZ - point.posZ) + roadData.relativeX * (point.posZ - otherPoint.posZ));
-    let height = (2 * triangleArea) / (linearAlgebra.vector2Distance(linearAlgebra.getVector2(point.posX, point.posZ), linearAlgebra.getVector2(otherPoint.posX, otherPoint.posZ))); 
-    console.log(height);
+    let prevPoint = roadData.road.points[roadData.segment.index - 1] === undefined? point : roadData.road.points[roadData.segment.index - 1];
+    let nextPoint = roadData.road.points[roadData.segment.index + 1] === undefined? point : roadData.road.points[roadData.segment.index + 1];
+    let initialT = ((point.posX - prevPoint.posX)*(nextPoint.posX - prevPoint.posX) + (point.posZ - prevPoint.posZ)*(nextPoint.posZ - prevPoint.posZ)) / (Math.pow(nextPoint.posX - prevPoint.posX, 2) + Math.pow(nextPoint.posZ - prevPoint.posZ, 2));
+    let appliedPoint = {posX: prevPoint.posX + initialT*(nextPoint.posX - prevPoint.posX), posZ: prevPoint.posZ + initialT*(nextPoint.posZ - prevPoint.posZ)};  
+    let appliedPrevPoint = {posX: point.posX + (prevPoint.posX - appliedPoint.posX), posZ: point.posZ + (prevPoint.posZ - appliedPoint.posZ)};
+    let appliedNextPoint = {posX: point.posX + (nextPoint.posX - appliedPoint.posX), posZ: point.posZ + (nextPoint.posZ - appliedPoint.posZ)};
+    let nextT = ((roadData.relativeX - appliedPrevPoint.posX)*(appliedNextPoint.posX - appliedPrevPoint.posX) + (roadData.relativeZ - appliedPrevPoint.posZ)*(appliedNextPoint.posZ - appliedPrevPoint.posZ)) / (Math.pow(appliedNextPoint.posX - appliedPrevPoint.posX, 2) + Math.pow(appliedNextPoint.posZ - appliedPrevPoint.posZ, 2));
+    let carAppliedPoint = {posX: appliedPrevPoint.posX + nextT*(appliedNextPoint.posX - appliedPrevPoint.posX), posZ: appliedPrevPoint.posZ + nextT*(appliedNextPoint.posZ - appliedPrevPoint.posZ)};
+    let roadVector = nextPoint === point? linearAlgebra.getVector2(point.posX - prevPoint.posX, point.posZ - prevPoint.posZ) : linearAlgebra.getVector2(nextPoint.posX - point.posX, nextPoint.posZ - point.posZ);
+    let totalLenght = 0;
+    let roadDirection = normalizeAngle(Math.atan2(roadVector[1], roadVector[0]));
+    let carAngle = normalizeAngle(currRotation);
+    let facing;
+    if(checkEqualsWithTolerance(roadDirection, carAngle, laneTolerance))
+        facing = true;
+    else if(checkEqualsWithTolerance(roadDirection, normalizeAngle(carAngle + Math.PI), laneTolerance))
+        facing = false;
+    else
+        facing = "incorrect rotation";
+    let inCorrectLane = false;
+    if((facing && checkEqualsWithTolerance(roadDirection, normalizeAngle(carAngle - Math.PI / 2), laneTolerance)) || (!facing && checkEqualsWithTolerance(roadDirection, normalizeAngle(carAngle + Math.PI / 2), laneTolerance)))
+        inCorrectLane = true;
+    document.getElementById("displayDist").innerText = linearAlgebra.vector2Distance(linearAlgebra.getVector2(carAppliedPoint.posX, carAppliedPoint.posZ), linearAlgebra.getVector2(roadData.relativeX, roadData.relativeZ)) + ` ${facing} ${inCorrectLane}`;
+}
+
+function checkEqualsWithTolerance(num1, num2, tolerance) {
+    return num1 - num2 > -tolerance && num2 - num1 < tolerance;
+}
+
+function normalizeAngle(angle) {
+    const tau = 2 * Math.PI;
+    return ((angle % tau) + tau) % tau;
 }

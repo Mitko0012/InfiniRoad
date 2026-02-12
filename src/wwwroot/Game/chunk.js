@@ -466,9 +466,6 @@ function generateRoadGeometry(chunk) {
             let pointVertices = [[], [], []];
             pointVertices[0][1] = temporaryY;
             pointVertices[1][1] = temporaryY;
-            if(i === path.divisions.length - 1 && chunk.tileType === tileTypes.T_INTERSECTION.index && equalFloatNumbers(point[0], chunk.nonPriorityPoint[0]) && equalFloatNumbers(point[1], chunk.nonPriorityPoint[1])) {
-               
-            }
             pointVertices[0][0] = point[0] - scalingVector[0]; 
             pointVertices[0][2] = point[1] - scalingVector[1];
             pointVertices[1][0] = point[0] + scalingVector[0]; 

@@ -27,7 +27,7 @@ const roadPointTypes = Object.freeze({
 let tileTypes = Object.freeze({
     STRAIGHT: {
         index: 0,
-        probability: 0,
+        probability: 2,
         check(outputNeighbours, undefinedNeighbours) {
             if(outputNeighbours.length === 2)
                 return true;
@@ -305,7 +305,7 @@ let tileTypes = Object.freeze({
     },
     T_INTERSECTION: {
         index: 2,
-        probability: 6,
+        probability: 0,
         check(outputNeighbours, undefinedNeighbours) {
             return outputNeighbours.length === 3 || (outputNeighbours.length < 3 && outputNeighbours.length + undefinedNeighbours.length >= 3);
         },
