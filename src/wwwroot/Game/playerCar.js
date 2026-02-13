@@ -4,11 +4,12 @@ const speedingBreakSpeed = 2.3;
 const regularSpeedUp = 2;
 const breakSpeed = 10; 
 const wheelTurnSpeed = 0.3;
-const stopTurningSpeed = 20;
-const minTurnSpeed = 0.5;
 const turnBackSpeed = 0.5;
-const wheelSlowSpeed = 10.5;
+const wheelDistortSpeed = 10;
+const wheelSlowSpeed = 0.2;
 const laneTolerance = 0.4;
+const laneEntranceTolerance = 0.8;
+const regularTurnSpeed = 50;
 
 let turnedOnLast = false;
 
@@ -33,7 +34,7 @@ function slowDown() {
 }
 
 function turn(rightTurning) {
-    let closeToCenterFactor = (Math.abs(turningAngle) + minSpeed) / (maxAngle + minSpeed);
+    let closeToCenterFactor = (Math.abs(turningAngle) + wheelTurnSpeed) / (maxAngle + wheelTurnSpeed);
     let toTurn = wheelTurnSpeed * deltaTime * (rightTurning ? 1 : -1) * closeToCenterFactor;
     if(turningAngle + toTurn > maxAngle)
         turningAngle = maxAngle;
@@ -64,9 +65,9 @@ function carUpdate() {
     let forwardVec = linearAlgebra.getVector2(Math.cos(currRotation), Math.sin(currRotation));
     playerCarX += forwardVec[0] * currSpeed * deltaTime;
     playerCarZ += forwardVec[1] * currSpeed * deltaTime;
-    let speedFactor = Math.min(wheelSlowSpeed, wheelSlowSpeed / currSpeed);
-    let slowSpeedFactor = currSpeed / minTurnSpeed;  
-    let toTurn = turningAngle * stopTurningSpeed * speedFactor * deltaTime * Math.min(slowSpeedFactor, 1);
+    let speedFactor = Math.min(1, wheelDistortSpeed / currSpeed);
+    let slowSpeedFactor = currSpeed / wheelSlowSpeed;  
+    let toTurn = turningAngle * regularTurnSpeed * speedFactor * deltaTime * Math.min(slowSpeedFactor, 1);
     currRotation += toTurn;
     turnedOnLast = false;
     verifyCorrectness()
@@ -99,7 +100,9 @@ function getRoadData() {
     }
     return {
         segment: lastSegment,
+        currChunk,
         road: lastRoad,
+        currChunk,
         relativeX,
         relativeZ
     };
@@ -116,28 +119,78 @@ function verifyCorrectness() {
     let appliedNextPoint = {posX: point.posX + (nextPoint.posX - appliedPoint.posX), posZ: point.posZ + (nextPoint.posZ - appliedPoint.posZ)};
     let nextT = ((roadData.relativeX - appliedPrevPoint.posX)*(appliedNextPoint.posX - appliedPrevPoint.posX) + (roadData.relativeZ - appliedPrevPoint.posZ)*(appliedNextPoint.posZ - appliedPrevPoint.posZ)) / (Math.pow(appliedNextPoint.posX - appliedPrevPoint.posX, 2) + Math.pow(appliedNextPoint.posZ - appliedPrevPoint.posZ, 2));
     let carAppliedPoint = {posX: appliedPrevPoint.posX + nextT*(appliedNextPoint.posX - appliedPrevPoint.posX), posZ: appliedPrevPoint.posZ + nextT*(appliedNextPoint.posZ - appliedPrevPoint.posZ)};
-    let roadVector = nextPoint === point? linearAlgebra.getVector2(point.posX - prevPoint.posX, point.posZ - prevPoint.posZ) : linearAlgebra.getVector2(nextPoint.posX - point.posX, nextPoint.posZ - point.posZ);
-    let totalLenght = 0;
+    let facing;
+    let totalSegmentLength;
+    let totalRoadLength = 0;
+    for(let segment of Object.values(roadData.road.pointSegments)) {
+        totalRoadLength += segment.length;
+        if(segment === roadData.segment)
+            totalSegmentLength = totalRoadLength;
+    }
+    let nextLanePoint;
+    let prevLanePoint;
+    let prevRoad = roadData.road;
+    let nextRoad = roadData.road;
+    let prevChunk = roadData.currChunk;
+    let nextChunk = roadData.currChunk;
+    let toIncreaseX = 0;
+    let toIncreaseY = 0;
+    let moveBack = false;
+    let moveForward = false;
+    if (totalSegmentLength - lookForward <= 0)
+        moveBack = true;
+    if(totalSegmentLength + lookForward >= totalRoadLength || equalFloatNumbers(totalSegmentLength + lookForward, totalRoadLength))
+        moveForward = true;
+    if(moveBack || moveForward) {
+        let endPoint = moveBack? roadData.road.points[0] : roadData.road.points[roadData.road.points.length - 1];
+        let nextData = getNext(roadData.road, endPoint, roadData.currChunk, this);
+        if(moveBack) {
+            prevLanePoint = walkOnRoad(nextData.nextRoad, lookForward - totalSegmentLength, nextData.facing);
+            nextLanePoint = walkOnRoad(roadData.road, totalSegmentLength + lookForward, true);
+            prevRoad = nextData.nextRoad;
+            prevChunk = nextData.nextChunk;
+        }
+        else {
+            prevLanePoint = walkOnRoad(roadData.road, totalSegmentLength - lookForward, true);
+            nextLanePoint = walkOnRoad(nextData.nextRoad, lookForward - (totalRoadLength - totalSegmentLength), nextData.facing);
+            nextRoad = nextData.nextRoad;
+            nextChunk = nextData.nextChunk;
+        }
+    } else {
+        prevLanePoint = walkOnRoad(roadData.road, totalSegmentLength - lookForward, true);
+        nextLanePoint = walkOnRoad(roadData.road, totalSegmentLength + lookForward, true);
+    }
+    prevLanePoint.point[0] += prevChunk.xCenter * 16;
+    prevLanePoint.point[1] += prevChunk.zCenter * 16;
+    nextLanePoint.point[0] += nextChunk.xCenter * 16;
+    nextLanePoint.point[1] += nextChunk.zCenter * 16;
+    let roadVector = linearAlgebra.getVector2(nextLanePoint.point[0] - prevLanePoint.point[0], nextLanePoint.point[1] - prevLanePoint.point[1]);
     let roadDirection = normalizeAngle(Math.atan2(roadVector[1], roadVector[0]));
     let carAngle = normalizeAngle(currRotation);
-    let facing;
+    let inCorrectLane = false;
     if(checkEqualsWithTolerance(roadDirection, carAngle, laneTolerance))
         facing = true;
     else if(checkEqualsWithTolerance(roadDirection, normalizeAngle(carAngle + Math.PI), laneTolerance))
         facing = false;
     else
         facing = "incorrect rotation";
-    let inCorrectLane = false;
-    if((facing && checkEqualsWithTolerance(roadDirection, normalizeAngle(carAngle - Math.PI / 2), laneTolerance)) || (!facing && checkEqualsWithTolerance(roadDirection, normalizeAngle(carAngle + Math.PI / 2), laneTolerance)))
+    let carPerpVec = linearAlgebra.getVector2(playerCarX - carAppliedPoint.posX, playerCarZ - carAppliedPoint.posZ);
+    let carPerpAngle = normalizeAngle(Math.atan2(carPerpVec[1], carPerpVec[0]));
+    let roadPerp = facing? normalizeAngle(roadDirection + Math.PI / 2) : normalizeAngle(roadDirection - Math.PI / 2);
+    if(checkEqualsWithTolerance(roadPerp, carPerpAngle, laneEntranceTolerance))
         inCorrectLane = true;
     document.getElementById("displayDist").innerText = linearAlgebra.vector2Distance(linearAlgebra.getVector2(carAppliedPoint.posX, carAppliedPoint.posZ), linearAlgebra.getVector2(roadData.relativeX, roadData.relativeZ)) + ` ${facing} ${inCorrectLane}`;
 }
 
 function checkEqualsWithTolerance(num1, num2, tolerance) {
-    return num1 - num2 > -tolerance && num2 - num1 < tolerance;
+    let min = Math.min(num1, num2);
+    let max = Math.max(num1, num2)
+    if(max - min > Math.PI)
+        min = max + (min - Math.PI * 2);
+    return min - max > -tolerance && min - max < tolerance;
 }
 
 function normalizeAngle(angle) {
     const tau = 2 * Math.PI;
-    return ((angle % tau) + tau) % tau;
+    return ((angle + Math.PI) % tau + tau) % tau - Math.PI;
 }

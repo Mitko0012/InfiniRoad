@@ -11,6 +11,7 @@ let carMesh;
 let carTexture;
 let carShaderProgram;
 
+
 class NpcCar {
     constructor(chunk, road, posOnRoad, facing, speed) {
         this.roadHistory = [];
@@ -18,8 +19,6 @@ class NpcCar {
         this.currChunk = chunk;
         this.roadHistory.push(road);
         this.facing = facing;
-        if(road === undefined)
-            console.log("6u6mar");
         this.currPoint = walkOnRoad(road, posOnRoad, facing);
         this.pointIndex = posOnRoad;
         this.isActive = true;
@@ -531,8 +530,8 @@ class NpcCar {
                             else
                                 index++;
                             if(checkingRoad.pointSegments[index] === undefined) {
-                                let data = this.getNext(checkingRoad, followingRoad, checkingChunk);
-                                if(data === undefined || data.type !== roadPointTypes.nextChunkTerminating)
+                                let data = getNext(checkingRoad, followingRoad, checkingChunk, this);
+                                if(data === undefined || data.type === roadPointTypes.sameChunkTerminating)
                                     return minSafeDist;
                                 checkingRoad = data.nextRoad;
                                 endPoint = data.nextPoint;
@@ -573,73 +572,86 @@ class NpcCar {
                 i--;
         }
     }
+}
 
-    getNext(road, endPoint, chunk) {
-        switch(endPoint.type) {
-            case roadPointTypes.nextChunkTerminating: {
-                let chunkX = 0;
-                let chunkZ = 0;
-                if(equalFloatNumbers(endPoint.posX, maxX))
-                    chunkX = 1;
-                else if(equalFloatNumbers(endPoint.posX, minX))
-                    chunkX = -1;
-                if(equalFloatNumbers(endPoint.posZ, maxZ))
-                    chunkZ = 1;
-                else if(equalFloatNumbers(endPoint.posZ, minZ))
-                    chunkZ = -1;
-                let nextChunk = chunks[String(chunk.xCenter + chunkX) + " " + String(chunk.zCenter + chunkZ)];
-                let continuingPoint;
-                let continuingRoad;
-                let facing;
-                if(nextChunk === undefined || nextChunk.isActive === false) {
-                    return undefined;
-                }
-                for(let road of nextChunk.roads) {
-                    let edgePoints = [
-                        road.points[0],
-                        road.points[road.points.length - 1]
-                    ];
-                    for(let point of edgePoints) {
-                        if(
-                            ((   
-                                (equalFloatNumbers(point.posX, maxX) && equalFloatNumbers(endPoint.posX, minX)) ||
-                                (equalFloatNumbers(point.posX, minX) && equalFloatNumbers(endPoint.posX, maxX))
-                            ) && equalFloatNumbers(point.posZ, endPoint.posZ)) ||
-                            ((   
-                                (equalFloatNumbers(point.posZ, maxZ) && equalFloatNumbers(endPoint.posZ, minZ)) ||
-                                (equalFloatNumbers(point.posZ, minZ) && equalFloatNumbers(endPoint.posZ, maxZ))
-                            ) && equalFloatNumbers(point.posX, endPoint.posX))
-                        ) {
-                            continuingPoint = point;
-                            continuingRoad = road;
-                            facing = point === road.points[0];
-                            break;
-                        }
+function getNext(road, endPoint, chunk, car) {
+    switch(endPoint.type) {
+        case roadPointTypes.nextChunkTerminating: {
+            let chunkX = 0;
+            let chunkZ = 0;
+            if(equalFloatNumbers(endPoint.posX, maxX))
+                chunkX = 1;
+            else if(equalFloatNumbers(endPoint.posX, minX))
+                chunkX = -1;
+            if(equalFloatNumbers(endPoint.posZ, maxZ))
+                chunkZ = 1;
+            else if(equalFloatNumbers(endPoint.posZ, minZ))
+                chunkZ = -1;
+            let nextChunk = chunks[String(chunk.xCenter + chunkX) + " " + String(chunk.zCenter + chunkZ)];
+            let continuingPoint;
+            let continuingRoad;
+            let facing;
+            if(nextChunk === undefined || nextChunk.isActive === false) {
+                return undefined;
+            }
+            for(let road of nextChunk.roads) {
+                let edgePoints = [
+                    road.points[0],
+                    road.points[road.points.length - 1]
+                ];
+                for(let point of edgePoints) {
+                    if(
+                        ((   
+                            (equalFloatNumbers(point.posX, maxX) && equalFloatNumbers(endPoint.posX, minX)) ||
+                            (equalFloatNumbers(point.posX, minX) && equalFloatNumbers(endPoint.posX, maxX))
+                        ) && equalFloatNumbers(point.posZ, endPoint.posZ)) ||
+                        ((   
+                            (equalFloatNumbers(point.posZ, maxZ) && equalFloatNumbers(endPoint.posZ, minZ)) ||
+                            (equalFloatNumbers(point.posZ, minZ) && equalFloatNumbers(endPoint.posZ, maxZ))
+                        ) && equalFloatNumbers(point.posX, endPoint.posX))
+                    ) {
+                        continuingPoint = point;
+                        continuingRoad = road;
+                        facing = point === road.points[0];
+                        break;
                     }
-                }
-                return {
-                    type: roadPointTypes.nextChunkTerminating,
-                    nextChunk,
-                    nextRoad: continuingRoad,
-                    nextPoint: continuingPoint,
-                    facing
                 }
             }
-            case roadPointTypes.interchangeTerminating: 
-                for(let interchangeRoadGroup of chunk.interchangeRoads) {
-                    let continuingEndPoint = interchangeRoadGroup[0].points[0];
-                    if(this.direction === null || this.direction === undefined)
-                            this.direction = Math.round(Math.random());
-                    if(equalFloatNumbers(endPoint.posX, continuingPoint.posX) && equalFloatNumbers(endPoint.posZ, continuingEndPoint.posZ)) {
-                        return {
-                            type: roadPointTypes.interchangeTerminating,
-                            nextChunk: chunk,
-                            nextRoad: interchangeRoadGroup[this.direction],
-                            nextPoint: interchangeRoadGroup[this.direction][0],
-                            facing: true
-                        };
-                    }
-                }
+            return {
+                type: roadPointTypes.nextChunkTerminating,
+                nextChunk,
+                nextRoad: continuingRoad,
+                nextPoint: continuingPoint,
+                facing
+            }
         }
+        case roadPointTypes.interchangeTerminating: 
+            for(let interchangeRoadGroup of chunk.interchangeRoads) {
+                let continuingPoint = interchangeRoadGroup[0].points[0];
+                if(car.direction === null || car.direction === undefined)
+                    car.direction = Math.round(Math.random());
+                if(equalFloatNumbers(endPoint.posX, continuingPoint.posX) && equalFloatNumbers(endPoint.posZ, continuingEndPoint.posZ)) {
+                    return {
+                        type: roadPointTypes.interchangeTerminating,
+                        nextChunk: chunk,
+                        nextRoad: interchangeRoadGroup[this.direction],
+                        nextPoint: interchangeRoadGroup[this.direction][0],
+                        facing: true
+                    };
+                }
+            }
+        case roadPointTypes.sameChunkTerminating:
+            for(let road of chunk.interchangeRoads) {
+                let continuingPoint = road.points[road.points.length - 1];
+                if(equalFloatNumbers(endPoint.posX, continuingPoint.posX) && equalFloatNumbers(endPoint.posZ, continuingPoint.posZ)) {
+                    return {
+                        type: roadPointTypes.interchangeTerminating,
+                        nextChunk: chunk,
+                        nextRoad: interchangeRoadGroup[this.direction],
+                        nextPoint: interchangeRoadGroup[this.direction][0],
+                        facing: false
+                    };
+                }
+            }
     }
 }
