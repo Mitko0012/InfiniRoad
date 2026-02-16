@@ -10,6 +10,10 @@ const wheelSlowSpeed = 0.2;
 const laneTolerance = 0.4;
 const laneEntranceTolerance = 0.8;
 const regularTurnSpeed = 50;
+const playerLength = 2;
+const checkBack = 10;
+const carData = {isActive: true};
+let lastRoad;
 
 let turnedOnLast = false;
 
@@ -174,12 +178,13 @@ function verifyCorrectness() {
         facing = false;
     else
         facing = "incorrect rotation";
-    let carPerpVec = linearAlgebra.getVector2(playerCarX - carAppliedPoint.posX, playerCarZ - carAppliedPoint.posZ);
+    let carPerpVec = linearAlgebra.getVector2(roadData.relativeX - carAppliedPoint.posX, roadData.relativeZ - carAppliedPoint.posZ);
     let carPerpAngle = normalizeAngle(Math.atan2(carPerpVec[1], carPerpVec[0]));
     let roadPerp = facing? normalizeAngle(roadDirection + Math.PI / 2) : normalizeAngle(roadDirection - Math.PI / 2);
     if(checkEqualsWithTolerance(roadPerp, carPerpAngle, laneEntranceTolerance))
         inCorrectLane = true;
     document.getElementById("displayDist").innerText = linearAlgebra.vector2Distance(linearAlgebra.getVector2(carAppliedPoint.posX, carAppliedPoint.posZ), linearAlgebra.getVector2(roadData.relativeX, roadData.relativeZ)) + ` ${facing} ${inCorrectLane}`;
+    updatePlayerStatus(roadData.currChunk, roadData.road, roadData.segment.index, facing, inCorrectLane);
 }
 
 function checkEqualsWithTolerance(num1, num2, tolerance) {
@@ -188,6 +193,48 @@ function checkEqualsWithTolerance(num1, num2, tolerance) {
     if(max - min > Math.PI)
         min = max + (min - Math.PI * 2);
     return min - max > -tolerance && min - max < tolerance;
+}
+
+function updatePlayerStatus(chunk, road, segmentIndex, facing, inCorrectLane) {
+    if(inCorrectLane) {
+        road.takenSegments[segmentIndex][facing? "right" : "left"] = carData;
+        let checkFacing = facing;
+        let checkingRoad = road;
+        let checkingIndex = segmentIndex;
+        let prevIncrease;
+        let increasing = 0;
+        for(let i = 1; i <= playerLength; i++) {
+            increasing++;
+            let toIncrease = increasing * (checkFacing? -1 : 1);
+            if(checkingIndex + toIncrease < 0 || checkingIndex + toIncrease >= road.takenSegments.length) {
+                let endPoint = checkingIndex + toIncrease < 0? road.points[0] : road.points[road.points.length - 1];
+                let next = getNext(road, endPoint, chunk, this);
+                checkingRoad = next.nextRoad;
+                checkFacing = !next.facing;
+                checkingIndex = next.facing? next.nextRoad.takenSegments.length - 1 : 0;
+                toIncrease = 0;
+                increasing = 0;
+            }
+            prevIncrease = checkingIndex + toIncrease;
+            checkingRoad.takenSegments[checkingIndex + toIncrease][checkFacing? "right" : "left"] = carData;
+        }
+        increasing = 0;
+        for(let i = 1; i <= checkBack; i++) {
+            increasing++;
+            let toIncrease = increasing * (checkFacing? -1 : 1);
+            if(prevIncrease + toIncrease < 0 || prevIncrease + toIncrease >= road.takenSegments.length) {
+                let endPoint = checkingIndex + toIncrease < 0 ? road.points[0] : road.points[road.points.length - 1];
+                let next = getNext(road, endPoint, chunk, this);
+                checkingRoad = next.nextRoad;
+                checkFacing = !next.facing;
+                prevIncrease = next.facing? next.nextRoad.takenSegments.length - 1 : 0;
+                toIncrease = 0;
+                increasing = 0;
+            }
+            if(checkingRoad.takenSegments[prevIncrease + toIncrease][checkFacing? "right" : "left"] === carData) 
+                checkingRoad.takenSegments[prevIncrease + toIncrease][checkFacing? "right" : "left"] = null;
+        }
+    }
 }
 
 function normalizeAngle(angle) {

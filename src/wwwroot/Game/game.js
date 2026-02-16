@@ -14,7 +14,7 @@ let facingVector = linearAlgebra;
 let roadTexture;
 let interchangeTexture;
 
-const carsPerLevel = 0;
+const carsPerLevel = 20;
 
 resourcesToLoad["terrainVert"] = {type: "text", source: "Game/Shaders/terrainVert.glsl"};
 resourcesToLoad["terrainFrag"] = {type: "text", source: "Game/Shaders/terrainFrag.glsl"};
