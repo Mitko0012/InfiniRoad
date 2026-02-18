@@ -6,6 +6,7 @@ let addedAngleX = 0;
 let addedAngleY = 0;
 let currentCars = [];
 
+let gameStarted = false;
 let rDownOnLast = false;
 let tDownOnLast = false;
 
@@ -30,6 +31,7 @@ resourcesToLoad["nonPriorityModel"] = {type: "text", source: "Models/non_priorit
 resourcesToLoad["priorityModel"] = {type: "text", source: "Models/priority_sign.obj"};
 resourcesToLoad["priorityTexture"] = {type: "image", source: "Textures/priority_sign_texture.png"};
 resourcesToLoad["nonPriorityTexture"] = {type: "image", source: "Textures/non_priority_sign_texture.png"};
+setUiResources();
 
 let carsInitialized = false;
 
@@ -46,6 +48,8 @@ onStart = () => {
         addedAngleX = Math.max(-89, Math.min(89, addedAngleX));
         addedAngleY = Math.max(-89, Math.min(89, addedAngleY));
     });
+
+    setFullPageUI(resourcesToLoad["startPage"].value);
 
     sunDirection[0] = 0.3; 
     camAngleY = 0;
@@ -67,51 +71,52 @@ onStart = () => {
 }
 
 onUpdate = () => {
+    if(gameStarted) {
+        if(keysDown["w"]) {accelerate();}
+        if(keysDown["s"]) {slowDown();}
+        if(keysDown["a"]) {turn(false);}
+        if(keysDown["d"]) {turn(true);}
 
-    if(keysDown["w"]) {accelerate();}
-    if(keysDown["s"]) {slowDown();}
-    if(keysDown["a"]) {turn(false);}
-    if(keysDown["d"]) {turn(true);}
+        camPosX = playerCarX;
+        camPosY = 0.7;
+        camPosZ = playerCarZ;
 
-    camPosX = playerCarX;
-    camPosY = 0.7;
-    camPosZ = playerCarZ;
+        camAngleX = addedAngleX;
+        camAngleY = -(currRotation * 180 / Math.PI) - 90 + addedAngleY;
 
-    camAngleX = addedAngleX;
-    camAngleY = -(currRotation * 180 / Math.PI) - 90 + addedAngleY;
+        updateMatrices();
+        updateChunk();
 
-    updateMatrices();
-    updateChunk();
+        carUpdate();
 
-    carUpdate();
+        let indicesToRemove = [];
+        for (let i = 0; i < currentCars.length; i++) {
+            let car = currentCars[i];
+            car.update();
+            if (car.isActive) car.render();
+            else indicesToRemove.push(i);
+        }
+        for (let i = indicesToRemove.length - 1; i >= 0; i--) {
+            currentCars.splice(indicesToRemove[i], 1);
+        }
 
-    let indicesToRemove = [];
-    for (let i = 0; i < currentCars.length; i++) {
-        let car = currentCars[i];
-        car.update();
-        if (car.isActive) car.render();
-        else indicesToRemove.push(i);
-    }
-    for (let i = indicesToRemove.length - 1; i >= 0; i--) {
-        currentCars.splice(indicesToRemove[i], 1);
-    }
-
-    while (currentCars.length < carsPerLevel) {
-        let activeChunksAsList = Object.values(activeChunks);
-        while (true) {
-            let chunk = activeChunksAsList[Math.round((activeChunksAsList.length - 1) * Math.random())];
-            if (chunk.roads === undefined || chunk.roads.length === 0)
-                continue;
-            let road = chunk.roads[Math.round(Math.random() * (chunk.roads.length - 1))];
-            if (road === undefined)
-                console.log("debug");
-            let segmentPos = Math.random() * road.totalLength;
-            let facing = (Math.random() < 0.5);
-            let segment = walkOnRoad(road, segmentPos, facing);
-            let occupation = road.takenSegments[segment.segment.index][facing ? "left" : "right"];
-            if (occupation === null || occupation === undefined) {
-                currentCars.push(new NpcCar(chunk, road, segmentPos, facing, 2));
-                break;
+        while (currentCars.length < carsPerLevel) {
+            let activeChunksAsList = Object.values(activeChunks);
+            while (true) {
+                let chunk = activeChunksAsList[Math.round((activeChunksAsList.length - 1) * Math.random())];
+                if (chunk.roads === undefined || chunk.roads.length === 0)
+                    continue;
+                let road = chunk.roads[Math.round(Math.random() * (chunk.roads.length - 1))];
+                if (road === undefined)
+                    console.log("debug");
+                let segmentPos = Math.random() * road.totalLength;
+                let facing = (Math.random() < 0.5);
+                let segment = walkOnRoad(road, segmentPos, facing);
+                let occupation = road.takenSegments[segment.segment.index][facing ? "left" : "right"];
+                if (occupation === null || occupation === undefined) {
+                    currentCars.push(new NpcCar(chunk, road, segmentPos, facing, 2));
+                    break;
+                }
             }
         }
     }
