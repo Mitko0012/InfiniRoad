@@ -3,5 +3,68 @@
 <canvas class="road-canvas"></canvas>
 
 <script>
-
+    const canvas = document.getElementById("road-canvas");
+    const ctx = canvas.getContext("2d");
+    const strokeSize = 0.5;
+    const visiblePoints = 16 * 3;
+    
+    const renderFunc = () => {
+        if(canvas.width !== canvas.clientWidth)
+            canvas.width = canvas.clientWidth;
+        if(canvas.height !== canvas.clientHeight)
+            canvas.height = canvas.clientHeight;
+        const unitSize = Math.max(canvas.width, canvas.height);
+        let checkingX = 0;
+        let checkingZ = 0;
+        let accumulatedXValue = 0;
+        let chunksToDraw = [];
+        let toChangeX = 16;
+        let toChangeZ = 16;
+        while(true) {
+            while(true) {
+                let accumulatedZValue = 0;
+                let checkingChunk = chunks[String(checkingX) + " " + String(checkingZ)];
+                if(checkingChunk === undefined) {
+                    registerChunk(checkingX, checkingZ);
+                    checkingChunk = chunks[String(checkingX) + " " + String(checkingZ)];
+                }
+                if(!checkingChunk.isActive) {
+                    checkingChunk.isActive = true;
+                    generateData(checkingChunk);
+                    generateRoadGeometry(checkingChunk);
+                    checkingChunk.geometry = generateGeometry(checkingChunk);
+                }
+                chunksToDraw.push(checkingChunk);
+                accumulatedZValue += toChangeZ;
+                checkingZ += toChangeZ / 16;
+                if(accumulatedZValue >= visiblePoints / 2) {
+                    checkingZ = -1;
+                    toChangeZ *= -1;
+                }
+                if(accumulatedZValue <= - (visiblePoints / 2)) {
+                    break;
+                }
+            }
+            checkingX += toChangeX / 16;
+            accumulatedXValue += toChangeX;
+            if(accumulatedXValue >= visiblePoints / 2) {
+                checkingX = -1;
+                toChangeX *= -1;
+            }
+            if(accumulatedXValue <= - (visiblePoints / 2))
+                break;
+        }
+        for(let chunk of chunksToDraw) {
+            const xOffset = chunk.xCenter * 16;
+            const zOffset = chunk.zCenter * 16;
+            for(let road of chunk.roads) {
+                let prevPoint = road.points[0]; 
+                for(let i = 1; i < road.points.lenght - 1; i++) {
+                    let point = road.points[i];
+                    // To implement
+                    prevPoint = point;
+                }
+            }
+        }
+    };
 </script>

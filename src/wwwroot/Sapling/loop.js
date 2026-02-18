@@ -44,12 +44,12 @@ function update(now) {
     let nowSecs = now / 1000;
     deltaTime = nowSecs - then; 
     then = nowSecs;
-    if(canvas.offsetWidth != canvas.width) {
-        canvas.width = canvas.offsetWidth;
+    if(canvas.width !== canvas.clientWidth) {
+        canvas.width = canvas.clientWidth;
         gl.viewport(0, 0, canvas.width, canvas.height);
     }
-    if(canvas.offsetHeight != canvas.height) {
-        canvas.height = canvas.offsetHeight;
+    if(canvas.height !== canvas.clientHeight) {
+        canvas.height = canvas.clientHeight;
         gl.viewport(0, 0, canvas.width, canvas.height);
     }
     gl.clearColor(colorToClear.red, colorToClear.green, colorToClear.blue, colorToClear.alpha);
