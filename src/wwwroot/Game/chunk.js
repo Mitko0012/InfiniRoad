@@ -23,7 +23,6 @@ const roadSignOffset = 1.8;
 
 function registerChunk(xCenter, zCenter) {
     chunks[String(xCenter) + " " + String(zCenter)] = {geometry: {}, pointData: {}, splineData: {}, isActive: false, xCenter, zCenter, hasInit: false} 
-    let currentChunk = chunks[String(xCenter) + " " + String(zCenter)];
     chunksToCollapse.push(chunks[String(xCenter) + " " + String(zCenter)]);
 }
 

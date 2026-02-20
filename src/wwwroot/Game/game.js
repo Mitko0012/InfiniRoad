@@ -32,6 +32,7 @@ resourcesToLoad["priorityModel"] = {type: "text", source: "Models/priority_sign.
 resourcesToLoad["priorityTexture"] = {type: "image", source: "Textures/priority_sign_texture.png"};
 resourcesToLoad["nonPriorityTexture"] = {type: "image", source: "Textures/non_priority_sign_texture.png"};
 setUiResources();
+let mouseData = {posX: 0, posY: 0};
 
 let carsInitialized = false;
 
@@ -41,6 +42,9 @@ onStart = () => {
     window.addEventListener("mousemove", (event) => {
         const deltaX = (event.movementX / canvas.width) * 180;
         const deltaY = (event.movementY / canvas.height) * 180;
+
+        mouseData.posX = event.clientX;
+        mouseData.posY = event.clientY;
 
         addedAngleY -= deltaX;
         addedAngleX -= deltaY;

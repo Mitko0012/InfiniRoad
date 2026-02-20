@@ -49,7 +49,6 @@
     font-size: 1.7em;
     border: 0px;
     border-radius: 15px;
-    font-family: "Racing Sans One";
 }
 
 .back-button:hover {
@@ -58,17 +57,17 @@
 
 .title-text {
     font-size: 2.8em;
-    font-family: "Racing Sans One";
     position: relative;
     width: fit-content;
     left: 50%;
     transform: translate(-50%);
     color: white;
+    font-family: "Racing Sans One";
 }
 
-.road-canvas {
+#road-canvas {
     width: 70%;
-    height: 40%;
+    height: 50%;
     background-color: rgb(61, 61, 61);
     position: relative;
     left: 50%;
@@ -84,4 +83,23 @@
     background-color: rgb(225, 181, 50);
     width: 100%;
     height: 100%;
+}
+
+#spawn-button {
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%);
+    top: 80%;
+    background-color: rgb(16, 198, 32);
+    font-size: 2em;
+    font-family: 'Racing Sans One';
+    color: white;
+    border: none;
+    border-radius: 15px;
+    width: 25%;
+    display: none;
+}
+
+#spawn-button:hover {
+    background-color:  rgb(4, 73, 8);
 }
