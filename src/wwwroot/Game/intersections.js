@@ -23,8 +23,8 @@ const T_INTERSECTION = Object.freeze({
         entryPoint: [1.7, 0],
         exitPoint: [1.7, 0],
         decidingPoint: [1.65, 0],
-        0: [-0.6, 0],
-        1: [0.6, 0],
+        0: [-0.2, 0],
+        1: [0.0, 0],
         index0: 0,
         index1: 1
     }

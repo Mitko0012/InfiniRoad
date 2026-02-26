@@ -15,6 +15,9 @@ const checkBack = 10;
 const carData = {isActive: true};
 const toLookForward = 5;
 const checkForward = 1.4;
+let instructorOverlay;
+let instructorTextElem;
+let showingInstuctorOverlay = false;
 let totalLastRoad;
 let roadHistory = [];
 
@@ -70,6 +73,10 @@ function carUpdate() {
                 turningAngle = toTurn;
         }
     }
+    if(instructorOverlay === undefined)
+        instructorOverlay = document.getElementById("overlappingInstructorDiv");
+    if(instructorTextElem === undefined)
+        instructorTextElem = document.getElementById("instructorTextDiv");
     let forwardVec = linearAlgebra.getVector2(Math.cos(currRotation), Math.sin(currRotation));
     playerCarX += forwardVec[0] * currSpeed * deltaTime;
     playerCarZ += forwardVec[1] * currSpeed * deltaTime;
@@ -89,7 +96,9 @@ function getRoadData() {
     let lastSegment;
     let lastRoad;
     let lastDistance;
-    if(currChunk.interchangeRoads !== undefined && approachInterData.approaching)
+    if(totalLastRoad !== undefined && totalLastRoad.pointSegments[0].type === roadPointTypes.sameChunkTerminating) {
+        allRoads.push(totalLastRoad);
+    } else if(currChunk.interchangeRoads !== undefined && approachInterData.approaching)
         for(let roadGroup of currChunk.interchangeRoads) {
             if(totalLastRoad !== undefined && equalFloatNumbers(roadGroup[0].points[0].posX, totalLastRoad.points[totalLastRoad.points.length - 1].posX) && equalFloatNumbers(roadGroup[0].points[0].posX, totalLastRoad.points[totalLastRoad.points.length - 1].posX)) {
                 allRoads.push(roadGroup[carData.direction]);
@@ -118,8 +127,8 @@ function getRoadData() {
 
 function verifyCorrectness() {
     let roadData = getRoadData();
-    if(totalLastRoad !== roadData.nextRoad) {
-        totalLastRoad = roadData.nextRoad;
+    if(totalLastRoad !== roadData.road) {
+        totalLastRoad = roadData.road;
         roadHistory.push(totalLastRoad);
     }
     let point = roadData.road.points[roadData.segment.index];
@@ -189,7 +198,7 @@ function verifyCorrectness() {
         inCorrectLane = true;
     let approachText = "";
     if(approachInterData != undefined && approachInterData.approaching)
-        approachText = " approaching";
+        approachText = approachInterData.text;
     document.getElementById("displayDist").innerText = linearAlgebra.vector2Distance(linearAlgebra.getVector2(carAppliedPoint.posX, carAppliedPoint.posZ), linearAlgebra.getVector2(roadData.relativeX, roadData.relativeZ)) + ` ${facing} ${inCorrectLane}` + approachText;
     updatePlayerStatus(roadData.currChunk, roadData.road, roadData.segment.index, facing, inCorrectLane);
 }
@@ -204,6 +213,13 @@ function checkEqualsWithTolerance(num1, num2, tolerance) {
 
 function updatePlayerStatus(chunk, road, segmentIndex, facing, inCorrectLane) {
     if(inCorrectLane) {
+        for(let checkRoad of roadHistory)
+            for(let segment of checkRoad.takenSegments) {
+                if(segment["right"] === carData)
+                    segment["right"] = null;
+                if(segment["left"] === carData)
+                    segment["left"] = null;
+            } 
         road.takenSegments[segmentIndex][facing? "right" : "left"] = carData;
         let checkFacing = facing;
         let checkingRoad = road;
@@ -227,31 +243,30 @@ function updatePlayerStatus(chunk, road, segmentIndex, facing, inCorrectLane) {
             prevIncrease = checkingIndex + toIncrease;
             checkingRoad.takenSegments[checkingIndex + toIncrease][checkFacing? "right" : "left"] = carData;
         }
-        increasing = 0;
-        for(let i = 1; i <= checkBack; i++) {
-            increasing++;
-            let toIncrease = increasing * (checkFacing? -1 : 1);
-            if(prevIncrease + toIncrease < 0 || prevIncrease + toIncrease >= checkingRoad.takenSegments.length) {
-                let endPoint = prevIncrease + toIncrease < 0 ? checkingRoad.points[0] : checkingRoad.points[checkingRoad.points.length - 1];
-                let next = getNext(checkingRoad, endPoint, checkingChunk, carData);
-                checkingRoad = next.nextRoad;
-                checkingChunk = next.nextChunk;
-                checkFacing = !next.facing;
-                prevIncrease = checkFacing? next.nextRoad.takenSegments.length - 1 : 0;
-                toIncrease = 0;
-                increasing = 0;
-            }
-            if(checkingRoad.takenSegments[prevIncrease + toIncrease] === undefined)
-                console.log()
-            if(checkingRoad.takenSegments[prevIncrease + toIncrease][checkFacing? "right" : "left"] === carData) 
-                checkingRoad.takenSegments[prevIncrease + toIncrease][checkFacing? "right" : "left"] = null;
-        }
         viewForward(chunk, road, segmentIndex, toLookForward, facing);
         if(approachInterData.approaching === true && approachInterData.interchange !== lastApproachingInter) {
             lastApproachingInter = approachInterData.interchange;
             switch(lastApproachingInter.type) {
                 case T_INTERSECTION:
                     carData.direction = Math.round(Math.random());
+                    let nextRoad = getNext(road, road.points[road.points.length - 1], chunk, {carData}).nextRoad;
+                    let startVec = linearAlgebra.getVector3(road.points[road.points.length - 1].posX - chunk.splineData.center.posX, 0, road.points[road.points.length - 1].posZ - chunk.splineData.center.posZ);
+                    let endVec = linearAlgebra.getVector3(nextRoad.points[nextRoad.points.length - 1].posX - chunk.splineData.center.posX, 0, nextRoad.points[nextRoad.points.length - 1].posZ - chunk.splineData.center.posZ);
+                    let rotatedMat = linearAlgebra.rotateAroundY(-approachInterData.interchange.angle);
+                    let appliedStartVec = linearAlgebra.multiplyMatrixAndVector(rotatedMat, startVec);
+                    let appliedEndVec = linearAlgebra.multiplyMatrixAndVector(rotatedMat, endVec);
+                    if(equalFloatNumbers(appliedStartVec[0], appliedEndVec[0]))
+                        approachInterData.text = "forward";
+                    else if(appliedStartVec[0] < appliedEndVec[0])
+                        approachInterData.text = "right";
+                    else
+                        approachInterData.text = "left";
+
+            }
+            if(!showingInstuctorOverlay) {
+                showingInstuctorOverlay = true;
+                instructorOverlay.style.display = "block";
+                instructorTextElem.innerText = approachInterData.text === "forward" ? "Continue forward" : `Turn ${approachInterData.text}`;
             }
         }
         else if(approachInterData.approaching === false)
@@ -286,6 +301,10 @@ function viewForward(chunk, road, initSegmentIndex, distanceToLook, isFacing) {
             approachInterData.interchange = currChunk.interchange;
             return;
         }
+    }
+    if(showingInstuctorOverlay) {
+        showingInstuctorOverlay = false;
+        instructorOverlay.style.display = "none";
     }
     approachInterData.approaching = false;
 }

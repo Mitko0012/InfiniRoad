@@ -1,7 +1,8 @@
 const uiContainer = document.getElementById("ui-container");
 const pages = [
     {name: "startPage", htmlSrc: "Game/Pages/startPage.html"},
-    {name: "roadDecisionPage", htmlSrc: "Game/Pages/roadDecision.html"}
+    {name: "roadDecisionPage", htmlSrc: "Game/Pages/roadDecision.html"},
+    {name: "overlay", htmlSrc: "Game/Pages/overlay.html"}
 ]
 
 function setUiResources() {
@@ -15,5 +16,5 @@ function setFullPageUI(html) {
 }
 
 function clearUI() {
-    uiContainer.innerHTML = "";
+    uiContainer.innerHTML = resourcesToLoad["overlay"].value;
 }

@@ -143,7 +143,7 @@ function drawChunk(chunk) {
                 let angle = Math.atan2(chunk.splineData.center.posZ - endPoint.posZ, chunk.splineData.center.posX - endPoint.posX);
                 if(angle < 0)
                     angle = Math.PI + (angle * -1);
-                let transformMat = linearAlgebra.multiplyMatrices(translationMat, linearAlgebra.rotateAroundY(angle));
+                let transformMat = linearAlgebra.multiplyMatrices(translationMat, linearAlgebra.multiplyMatrices(linearAlgebra.rotateAroundY(angle), linearAlgebra.getTranslationMatrix(0.0, 0.03, 0.03)));
                 nonPriorityShaderProgram.bind();
                 nonPriorityShaderProgram.setUniform("uSampler", nonPriorityTexture);
                 nonPriorityMesh.bind();

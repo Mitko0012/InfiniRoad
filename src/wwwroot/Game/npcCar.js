@@ -623,8 +623,6 @@ function getNext(road, endPoint, chunk, car) {
                 facing
             }
         case roadPointTypes.interchangeTerminating:
-            if(chunk.interchangeRoads === undefined)
-                console.log();
             for(let interchangeRoadGroup of chunk.interchangeRoads) {
                 let continuingPoint = interchangeRoadGroup[0].points[0];
                 if(car.direction === null || car.direction === undefined)

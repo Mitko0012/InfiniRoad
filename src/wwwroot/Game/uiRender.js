@@ -3,7 +3,7 @@ function startRender() {
     const ctx = canvas.getContext("2d");
     console.log("patkan");
     const strokeSize = 0.5;
-    const visiblePoints = 16 * 4;
+    const visiblePoints = 16 * 5;
     const selectionScale = 20;
     const spawnButton = document.getElementById("spawn-button");
     let isClicking = false;
@@ -15,8 +15,28 @@ function startRender() {
     spawnButton.onclick = () => {
         clearUI();
         gameStarted = true;
-        playerCarX = selectionData.chunk.xCenter * 16 + selectionData.point.posX;
-        playerCarZ = selectionData.chunk.zCenter * 16 + selectionData.point.posZ;
+        camAngleX = 90;
+        let index = 0;
+        let prevPoint;
+        let nextPoint;
+        for(let point of selectionData.road.points) {
+            if(point === selectionData.point) {
+                if(index === 0) {
+                    prevPoint = point;
+                    nextPoint = selectionData.road.points[index + 1]; 
+                }
+                else {
+                    prevPoint = selectionData.road.points[index - 1];
+                    nextPoint = point;
+                }
+                break;
+            }
+            index++;
+        }
+        let dirVector = linearAlgebra.scaleVector(linearAlgebra.normalizeVec2(linearAlgebra.getVector2(nextPoint.posX - prevPoint.posX, nextPoint.posZ, prevPoint.posZ)), 1.3);
+        playerCarX = selectionData.chunk.xCenter * 16 + selectionData.point.posX + dirVector[1];
+        playerCarZ = selectionData.chunk.zCenter * 16 + selectionData.point.posZ + dirVector[0];
+        currRotation = Math.atan2(dirVector[1], dirVector[0]);
     };
     
     const renderFunc = () => {
@@ -64,17 +84,16 @@ function startRender() {
                 let checkingChunk = chunks[String(checkingX) + " " + String(checkingZ)];
                 if(checkingChunk === undefined) {
                     chunks[String(checkingX) + " " + String(checkingZ)] = {geometry: {}, pointData: {}, splineData: {}, isActive: false, xCenter: checkingX, zCenter: checkingZ, hasInit: false} 
-                    generateData(checkingChunk);
-                    checkingChunk.geometry = generateGeometry(checkingChunk); 
-                    generateRoadGeometry(checkingChunk);
-                    collapseChunks([checkingChunk]);
                     checkingChunk = chunks[String(checkingX) + " " + String(checkingZ)];
+                    collapseChunks([checkingChunk]);
                 }
                 if(!checkingChunk.isActive) {
                     checkingChunk.isActive = true;
                     generateData(checkingChunk);
                     checkingChunk.geometry = generateGeometry(checkingChunk); 
                     generateRoadGeometry(checkingChunk);
+                    if(activeChunks[String(checkingX) + " " + String(checkingZ)] === undefined)
+                        activeChunks[String(checkingX) + " " + String(checkingZ)] = checkingChunk;
                 }
                 chunksToDraw.push(checkingChunk);
                 accumulatedZValue += toChangeZ;
@@ -106,7 +125,7 @@ function startRender() {
             for(let road of Object.values(chunk.roads)) {
                 let prevPoint = road.points[0]; 
                 ctx.beginPath();
-                for(let i = 1; i < road.points.length - 1; i++) {
+                for(let i = 1; i <= road.points.length - 1; i++) {
                     let point = road.points[i];
                     ctx.moveTo(canvas.width / 2 + (chunk.xCenter * 16 + prevPoint.posX) * unitSize, canvas.height / 2 + (chunk.zCenter * 16 + prevPoint.posZ) * unitSize);
                     ctx.lineTo(canvas.width / 2 + (chunk.xCenter * 16 + point.posX) * unitSize, canvas.height / 2 + (chunk.zCenter * 16 + point.posZ) * unitSize)
@@ -114,6 +133,13 @@ function startRender() {
                 }
                 ctx.stroke();
             }
+            if(chunk.splineData.center !== undefined)
+                for(let road of Object.values(chunk.roads)) {
+                    ctx.beginPath();
+                    ctx.moveTo(canvas.width / 2 + (chunk.xCenter * 16 + road.points[road.points.length - 1].posX) * unitSize, canvas.height / 2 + (chunk.zCenter * 16 + road.points[road.points.length - 1].posZ) * unitSize);
+                    ctx.lineTo(canvas.width / 2 + (chunk.xCenter * 16 + chunk.splineData.center.posX) * unitSize, canvas.height / 2 + (chunk.zCenter * 16 + chunk.splineData.center.posZ) * unitSize);
+                    ctx.stroke();
+                }                    
         }
         if(selectionData.chunk !== undefined) {
             ctx.strokeStyle = "green";
