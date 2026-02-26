@@ -141,3 +141,9 @@
     background-color: lightblue;
 }
 
+#speed-display {
+    position: absolute;
+    top: 80%;
+    font-size: 2.6em;
+    color: white;
+}

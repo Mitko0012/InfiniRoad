@@ -137,7 +137,7 @@ function drawChunk(chunk) {
         for(let road of chunk.roads) {
             let endPoint = road.points[road.points.length - 1];
             if(equalFloatNumbers(endPoint.posX, chunk.nonPriorityPoint[0]) && equalFloatNumbers(endPoint.posZ, chunk.nonPriorityPoint[1])) {
-                let normalizedVec = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(-(chunk.splineData.center.posZ - endPoint.posZ), chunk.splineData.center.posX - endPoint.posX));
+                let normalizedVec = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(chunk.splineData.center.posZ - endPoint.posZ, chunk.splineData.center.posX - endPoint.posX));
                 let moveVec = linearAlgebra.scaleVector(linearAlgebra.getVector4(normalizedVec[0], 0, normalizedVec[1], 1), roadSignOffset);
                 let translationMat = linearAlgebra.getTranslationMatrix(chunk.xCenter * 16 + endPoint.posX + moveVec[0], 0.1, chunk.zCenter * 16 + endPoint.posZ + moveVec[2]);
                 let angle = Math.atan2(chunk.splineData.center.posZ - endPoint.posZ, chunk.splineData.center.posX - endPoint.posX);
@@ -173,8 +173,6 @@ function drawChunk(chunk) {
                 foundNonPrior = true;
             }
         }
-        if(!foundNonPrior)
-            console.log("6u6mar");
     }
 }
 
