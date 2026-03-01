@@ -15,7 +15,7 @@ let facingVector = linearAlgebra;
 let roadTexture;
 let interchangeTexture;
 
-const carsPerLevel = 20;
+let carsPerLevel = 20;
 
 resourcesToLoad["terrainVert"] = {type: "text", source: "Game/Shaders/terrainVert.glsl"};
 resourcesToLoad["terrainFrag"] = {type: "text", source: "Game/Shaders/terrainFrag.glsl"};
@@ -31,6 +31,8 @@ resourcesToLoad["nonPriorityModel"] = {type: "text", source: "Models/non_priorit
 resourcesToLoad["priorityModel"] = {type: "text", source: "Models/priority_sign.obj"};
 resourcesToLoad["priorityTexture"] = {type: "image", source: "Textures/priority_sign_texture.png"};
 resourcesToLoad["nonPriorityTexture"] = {type: "image", source: "Textures/non_priority_sign_texture.png"};
+resourcesToLoad["playerCarModel"] = {type: "text", source: "Models/player_car.obj"};
+resourcesToLoad["playerCarTexture"] = {type: "image", source: "Textures/player_car_texture.png"};
 setUiResources();
 let mouseData = {posX: 0, posY: 0};
 
@@ -57,7 +59,6 @@ onStart = () => {
 
     sunDirection[0] = 0.3; 
     camAngleY = 0;
-    camPosY = 5;
 
     terrainShader = drawingData.createShaderConfig(resourcesToLoad["terrainVert"].value, resourcesToLoad["terrainFrag"].value);
     roadShader = drawingData.createShaderConfig(resourcesToLoad["roadVert"].value, resourcesToLoad["roadFrag"].value);
@@ -65,6 +66,7 @@ onStart = () => {
     interchangeTexture = drawingData.textureFromImage(resourcesToLoad["tInterTexture"].value);
     carMesh = drawingData.parseObj(resourcesToLoad["carModel"].value, false, true, true);
     carTexture = drawingData.textureFromImage(resourcesToLoad["carTexture"].value);
+    playerCarMesh = drawingData.parseObj(resourcesToLoad["playerCarModel"].value, false, true, true);
     nonPriorityMesh = drawingData.parseObj(resourcesToLoad["nonPriorityModel"].value, false, true, true);
     priorityMesh = drawingData.parseObj(resourcesToLoad["priorityModel"].value, false, true, true);
     priorityTexture = drawingData.textureFromImage(resourcesToLoad["priorityTexture"].value);
@@ -72,6 +74,8 @@ onStart = () => {
     nonPriorityShaderProgram = drawingData.createShaderConfig(resourcesToLoad["modelVert"].value, resourcesToLoad["modelFrag"].value);
     priorityShaderProgram = drawingData.createShaderConfig(resourcesToLoad["modelVert"].value, resourcesToLoad["modelFrag"].value);
     carShaderProgram = drawingData.createShaderConfig(resourcesToLoad["modelVert"].value, resourcesToLoad["modelFrag"].value);
+    playerCarShaderProgram = drawingData.createShaderConfig(resourcesToLoad["modelVert"].value, resourcesToLoad["modelFrag"].value);
+    playerCarTexture = drawingData.textureFromImage(resourcesToLoad["playerCarTexture"].value);
 }
 
 onUpdate = () => {
@@ -82,7 +86,7 @@ onUpdate = () => {
         if(keysDown["d"]) {turn(true);}
 
         camPosX = playerCarX;
-        camPosY = 0.7;
+        camPosY = 0.36;
         camPosZ = playerCarZ;
 
         camAngleX = addedAngleX;
@@ -124,6 +128,14 @@ onUpdate = () => {
             }
         }
     }
+}
+
+function changeCarsPerLevel() {
+    carsPerLevel = document.getElementById("car-setting").value;
+}
+
+function recomputeCarCount() {
+    document.getElementById("car-setting").value = carsPerLevel;
 }
 
 start("drawing-canvas");

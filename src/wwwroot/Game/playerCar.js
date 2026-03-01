@@ -9,7 +9,8 @@ const wheelDistortSpeed = 10;
 const wheelSlowSpeed = 0.2;
 const laneTolerance = 0.4;
 const extendedTolerance = 0.8;
-const laneEntranceTolerance = 1.5;
+const laneEntranceTolerance = 2;
+const warningLaneIssueTolearance = 3;
 const directionTolerance = 0.2;
 const regularTurnSpeed = 50;
 const playerLength = 2;
@@ -22,20 +23,30 @@ const maxVisibleAngle = 0.7;
 let speedDisplay;
 let instructorOverlay;
 let instructorTextElem;
-let showingInstuctorOverlay = false;
+let showingInstructorOverlay = false;
 let totalLastRoad;
 let roadHistory = [];
+let playerCarMesh;
+let playerCarTextureData;
 
 let turnedOnLast = false;
 let approachInterData = {approaching: false}
 let lastApproachingInter;
 let tookPriority = false;
+let onInterchangeRoad = false;
+let stoppingExam = true;
 
 let playerCarX = 0;
 let playerCarZ = 0;
 let currSpeed = 0;
 let currRotation = 0;
 let turningAngle = 0;
+let playerCarShaderProgram;
+let playerCarTexture;
+let leftBlinkerOn = false;
+let rightBlinkerOn = false;
+let leftArrowKeyDownAtLast = false;
+let rightArrowKeyDownAtLast = false;
 
 
 function accelerate() {
@@ -93,7 +104,8 @@ function carUpdate() {
     let toTurn = turningAngle * regularTurnSpeed * speedFactor * deltaTime * Math.min(slowSpeedFactor, 1);
     currRotation += toTurn;
     turnedOnLast = false;
-    verifyCorrectness()
+    verifyCorrectness();
+    renderPlayerCar();
 }
 
 function getRoadData() {
@@ -124,6 +136,10 @@ function getRoadData() {
                 lastRoad = road;
             }
     }
+    if(totalLastRoad !== lastRoad && lastRoad.points[0].type === roadPointTypes.sameChunkTerminating)
+        onInterchangeRoad = true;
+    else if(totalLastRoad !== lastRoad && lastRoad.points[lastRoad.points.length - 1].type === roadPointTypes.interchangeTerminating)
+        onInterchangeRoad = false;
     return {
         segment: lastSegment,
         currChunk,
@@ -151,9 +167,10 @@ function verifyCorrectness() {
                 otherRoads.push(road);    
             }
             let visibleSegments = otherRoads.map((r) => getStraightSegment(r));
-            for(let segment of visibleSegments)
-                if(segment["right"] === carData)
-                    tookPriority = true;
+            for(let segmentGroup of visibleSegments)
+                for(segment of segmentGroup)
+                    if(segment["right"] !== null)
+                        tookPriority = true;
         } else if(totalLastRoad.points[totalLastRoad.points.length - 1].type === roadPointTypes.interchangeTerminating) 
             tookPriority = false;
     }
@@ -203,6 +220,14 @@ function verifyCorrectness() {
         prevLanePoint = walkOnRoad(roadData.road, totalSegmentLength - checkForward, true);
         nextLanePoint = walkOnRoad(roadData.road, totalSegmentLength + checkForward, true);
     }
+    if(leftBlinkerOn)
+        document.getElementById("left-blinker-img").src = "Textures/leftOnBlinker.png";
+    else
+        document.getElementById("left-blinker-img").src = "Textures/leftOffBlinker.png";
+    if(rightBlinkerOn)
+        document.getElementById("right-blinker-img").src = "Textures/rightOnBlinker.png";
+    else
+        document.getElementById("right-blinker-img").src = "Textures/rightOffBlinker.png";
     prevLanePoint.point[0] += prevChunk.xCenter * 16;
     prevLanePoint.point[1] += prevChunk.zCenter * 16;
     nextLanePoint.point[0] += nextChunk.xCenter * 16;
@@ -227,9 +252,20 @@ function verifyCorrectness() {
     let roadPerp = facing? normalizeAngle(roadDirection + Math.PI / 2) : normalizeAngle(roadDirection - Math.PI / 2);
     if(checkEqualAnglesWithTolerance(roadPerp, carPerpAngle, laneEntranceTolerance))
         inCorrectLane = true;
-    document.getElementById("displayDist").innerText = tookPriority;
-    // linearAlgebra.vector2Distance(linearAlgebra.getVector2(carAppliedPoint.posX, carAppliedPoint.posZ), linearAlgebra.getVector2(roadData.relativeX, roadData.relativeZ)) + ` ${facing} ${inCorrectLane}`;
-    updatePlayerStatus(roadData.currChunk, roadData.road, roadData.segment.index, facing, inCorrectLane);
+    else if(checkEqualAnglesWithTolerance(roadPerp, carPerpAngle, warningLaneIssueTolearance))
+        inCorrectLane = "warn";
+    let magnitude = linearAlgebra.getVectorMagnitudeVec2(carPerpVec);
+    updatePlayerStatus(roadData.currChunk, roadData.road, roadData.segment.index, facing, inCorrectLane, magnitude);
+    if(keysDown["ArrowLeft"] && !leftArrowKeyDownAtLast) {
+        rightBlinkerOn = false;
+        leftBlinkerOn = !leftBlinkerOn;
+    }
+    if(keysDown["ArrowRight"] && !rightArrowKeyDownAtLast) {
+        leftBlinkerOn = false;
+        rightBlinkerOn = !rightBlinkerOn;
+    }
+    leftArrowKeyDownAtLast = keysDown["ArrowLeft"];
+    rightArrowKeyDownAtLast = keysDown["ArrowRight"];
 }
 
 function checkEqualAnglesWithTolerance(num1, num2, tolerance) {
@@ -240,68 +276,88 @@ function checkEqualAnglesWithTolerance(num1, num2, tolerance) {
 
     return Math.abs(diff) < tolerance;
 }
-function updatePlayerStatus(chunk, road, segmentIndex, facing, inCorrectLane) {
-    if(inCorrectLane) {
-        for(let checkRoad of roadHistory)
-            for(let segment of checkRoad.takenSegments) {
-                if(segment["right"] === carData)
-                    segment["right"] = null;
-                if(segment["left"] === carData)
-                    segment["left"] = null;
-            } 
-        road.takenSegments[segmentIndex][facing? "right" : "left"] = carData;
-        let checkFacing = facing;
-        let checkingRoad = road;
-        let checkingIndex = segmentIndex;
-        let checkingChunk = chunk;
-        let prevIncrease;
-        let increasing = 0;
-        for(let i = 1; i <= playerLength; i++) {
-            increasing++;
-            let toIncrease = increasing * (checkFacing? -1 : 1);
-            if(checkingIndex + toIncrease < 0 || checkingIndex + toIncrease >= road.takenSegments.length) {
-                let endPoint = checkingIndex + toIncrease < 0? road.points[0] : road.points[road.points.length - 1];
-                let next = getNext(checkingRoad, endPoint, checkingChunk, carData);
-                checkingRoad = next.nextRoad;
-                checkFacing = !next.facing;
-                checkingChunk = next.nextChunk;
-                checkingIndex = checkFacing? next.nextRoad.takenSegments.length - 1 : 0;
-                toIncrease = 0;
-                increasing = 0;
-            }
-            prevIncrease = checkingIndex + toIncrease;
+function updatePlayerStatus(chunk, road, segmentIndex, facing, inCorrectLane, magnitude) {
+    for(let checkRoad of roadHistory)
+        for(let segment of checkRoad.takenSegments) {
+            if(segment["right"] === carData)
+                segment["right"] = null;
+            if(segment["left"] === carData)
+                segment["left"] = null;
+        } 
+    road.takenSegments[segmentIndex][facing? "right" : "left"] = carData;
+    let checkFacing = facing;
+    let checkingRoad = road;
+    let checkingIndex = segmentIndex;
+    let checkingChunk = chunk;
+    let prevIncrease;
+    let increasing = 0;
+    for(let i = 1; i <= playerLength; i++) {
+        increasing++;
+        let toIncrease = increasing * (checkFacing? -1 : 1);
+        if(checkingIndex + toIncrease < 0 || checkingIndex + toIncrease >= road.takenSegments.length) {
+            let endPoint = checkingIndex + toIncrease < 0? road.points[0] : road.points[road.points.length - 1];
+            let next = getNext(checkingRoad, endPoint, checkingChunk, carData);
+            checkingRoad = next.nextRoad;
+            checkFacing = !next.facing;
+            checkingChunk = next.nextChunk;
+            checkingIndex = checkFacing? next.nextRoad.takenSegments.length - 1 : 0;
+            toIncrease = 0;
+            increasing = 0;
+        }
+        prevIncrease = checkingIndex + toIncrease;
+        if(checkingRoad.takenSegments[checkingIndex + toIncrease] !== undefined)
             checkingRoad.takenSegments[checkingIndex + toIncrease][checkFacing? "right" : "left"] = carData;
-        }
-        checkApproaching(chunk, road, segmentIndex, toLookForward, facing);
-        if(approachInterData.approaching === true && approachInterData.interchange !== lastApproachingInter) {
-            lastApproachingInter = approachInterData.interchange;
-            switch(lastApproachingInter.type) {
-                case T_INTERSECTION:
-                    carData.direction = Math.round(Math.random());
-                    let nextRoad = getNext(road, road.points[road.points.length - 1], chunk, {carData}).nextRoad;
-                    let startVec = linearAlgebra.getVector3(nextRoad.points[0].posX - chunk.splineData.center.posX, 0, nextRoad.points[0].posZ - chunk.splineData.center.posZ);
-                    let endVec = linearAlgebra.getVector3(nextRoad.points[nextRoad.points.length - 1].posX - chunk.splineData.center.posX, 0, nextRoad.points[nextRoad.points.length - 1].posZ - chunk.splineData.center.posZ);
-                    let rotatedMat = linearAlgebra.rotateAroundY(-approachInterData.interchange.angle);
-                    let appliedStartVec = linearAlgebra.multiplyMatrixAndVector(rotatedMat, startVec);
-                    let appliedEndVec = linearAlgebra.multiplyMatrixAndVector(rotatedMat, endVec);
-                    if(checkEqualAnglesWithTolerance(appliedStartVec[0], appliedEndVec[0], laneTolerance))
-                        approachInterData.text = "forward";
-                    else if(appliedStartVec[0] < appliedEndVec[0])
-                        approachInterData.text = "right";
-                    else
-                        approachInterData.text = "left";
-
-            }
-            if(!showingInstuctorOverlay) {
-                showingInstuctorOverlay = true;
-                instructorOverlay.style.display = "block";
-                instructorTextElem.innerText = approachInterData.text === "forward" ? "Continue forward" : `Turn ${approachInterData.text}`;
-            }
-        }
-        else if(approachInterData.approaching === false)
-            lastApproachingInter = null;
-        speedDisplay.innerText = Math.round(currSpeed * speedRatio * (36 / 10)) + " km/h";
     }
+    checkApproaching(chunk, road, segmentIndex, toLookForward, facing);
+    if(approachInterData.approaching === true && approachInterData.interchange !== lastApproachingInter) {
+        lastApproachingInter = approachInterData.interchange;
+        switch(lastApproachingInter.type) {
+            case T_INTERSECTION:
+                carData.direction = Math.round(Math.random());
+                let nextRoad = getNext(road, road.points[road.points.length - 1], chunk, {carData}).nextRoad;
+                let startVec = linearAlgebra.getVector3(nextRoad.points[0].posX - chunk.splineData.center.posX, 0, nextRoad.points[0].posZ - chunk.splineData.center.posZ);
+                let endVec = linearAlgebra.getVector3(nextRoad.points[nextRoad.points.length - 1].posX - chunk.splineData.center.posX, 0, nextRoad.points[nextRoad.points.length - 1].posZ - chunk.splineData.center.posZ);
+                let rotatedMat = linearAlgebra.rotateAroundY(-Math.atan2(startVec[1], startVec[0]));
+                let appliedStartVec = linearAlgebra.multiplyMatrixAndVector(rotatedMat, startVec);
+                let appliedEndVec = linearAlgebra.multiplyMatrixAndVector(rotatedMat, endVec);
+                if(checkEqualAnglesWithTolerance(appliedStartVec[0], appliedEndVec[0], laneTolerance))
+                    approachInterData.text = "forward";
+                else if(appliedStartVec[0] < appliedEndVec[0])
+                    approachInterData.text = "right";
+                else
+                    approachInterData.text = "left";
+
+        }
+        if(!showingInstructorOverlay) {
+            showingInstructorOverlay = true;
+            instructorOverlay.style.display = "block";
+        }
+    }
+    else if(approachInterData.approaching === false)
+        lastApproachingInter = null;
+    if(inCorrectLane !== true) {
+        showingInstructorOverlay = true;
+        instructorOverlay.style.display = "block";
+    }
+    if(showingInstructorOverlay) {
+        instructorTextElem.innerText = "";
+        if(approachInterData.approaching && magnitude > 0.4 && segmentIndex !== road.takenSegments.length - 1 && segmentIndex !== road.takenSegments.length - 2 && segmentIndex !== 0 && segmentIndex !== 1)
+            instructorTextElem.innerText += approachInterData.text === "forward" ? "Продължете направо!" : approachInterData.text === "right" ? "Завийте надясно!" : "Завийте наляво!";
+        if(inCorrectLane === "warn" && !onInterchangeRoad)
+            instructorTextElem.innerText += " Стойте в лентата!";
+        else if(inCorrectLane === false && !onInterchangeRoad && magnitude > 0.4 && segmentIndex !== road.takenSegments.length - 1 && segmentIndex !== road.takenSegments.length - 2 && segmentIndex !== 0 && segmentIndex !== 1)
+            endExam(["Излязохте от лентата"]);
+    }
+    speedDisplay.innerText = Math.round(currSpeed * speedRatio * (36 / 10)) + " km/h";
+    if(tookPriority)
+        endExam(["Отнехте предимство"]);
+    if(onInterchangeRoad)
+        if(approachInterData.text === "right" && !rightBlinkerOn)
+            endExam(["Не пуснахте мигач правлино"]);
+        else if(approachInterData.text === "left" && !leftBlinkerOn)
+            endExam(["Не пуснахте мигач правилно"]);
+        else if(approachInterData.text === "forward" && rightBlinkerOn || leftBlinkerOn)
+            endExam(["Не пуснахте мигач правилно"]);
 }
 
 function normalizeAngle(angle) {
@@ -332,8 +388,8 @@ function checkApproaching(chunk, road, initSegmentIndex, distanceToLook, isFacin
             return;
         }
     }
-    if(showingInstuctorOverlay) {
-        showingInstuctorOverlay = false;
+    if(showingInstructorOverlay) {
+        showingInstructorOverlay = false;
         instructorOverlay.style.display = "none";
     }
     approachInterData.approaching = false;
@@ -342,13 +398,58 @@ function checkApproaching(chunk, road, initSegmentIndex, distanceToLook, isFacin
 function getStraightSegment(road) {
     let initialDirectionVec = linearAlgebra.getVector2(road.points[road.points.length - 2].posX - road.points[road.points.length - 1].posX, road.points[road.points.length - 2].posZ - road.points[road.points.length - 1].posZ);
     let initialDirectionAngle = Math.atan2(initialDirectionVec.posZ, initialDirectionVec.posX);
-    let collectedSegments = [road.pointSegments[road.pointSegments.length - 1]];
+    let collectedSegments = [road.takenSegments[road.takenSegments.length - 1]];
     for(let i = road.points.length - 3; i >= 0; i--) {
-        let directionVec = linearAlgebra.getVector2(road.points[i + 1].posX - road.points[i].posX)
+        let directionVec = linearAlgebra.getVector2(road.points[i + 1].posX - road.points[i].posX, road.points[i + 1].posZ - road.points[i].posZ)
         let direction = Math.atan2(directionVec.posZ, directionVec.posX);
         if(checkEqualAnglesWithTolerance(direction, initialDirectionAngle, maxVisibleAngle))
             collectedSegments.push(road.takenSegments[i]);
         else {break;}
     }
     return collectedSegments;
+}
+
+function renderPlayerCar() {
+    let movingMatrix = linearAlgebra.getTranslationMatrix(0, 0, -0.04);
+    let translationMatrix = linearAlgebra.getTranslationMatrix(camPosX, 0.2, camPosZ);
+    let rotationMatirx = linearAlgebra.rotateAroundY(-currRotation + Math.PI);
+    if(drawingData.getBoundShaderProgram() !== playerCarShaderProgram) {
+        playerCarShaderProgram.bind();
+        playerCarShaderProgram.setUniform("uSampler", playerCarTexture);
+    }
+    playerCarMesh.bind(); 
+    let processedSunDirection = linearAlgebra.normalizeVec3(sunDirection);
+    processedSunDirection = linearAlgebra.getVector3(-sunDirection[0], -sunDirection[1], -sunDirection[2]);
+    playerCarShaderProgram.setUniform("lightDirection", processedSunDirection);
+    playerCarShaderProgram.setUniform("transformationMatrix", linearAlgebra.formatMatrix(linearAlgebra.multiplyMatrices(translationMatrix, 
+    linearAlgebra.multiplyMatrices(rotationMatirx, movingMatrix))));
+    playerCarShaderProgram.setUniform("cameraMatrix", linearAlgebra.formatMatrix(camMatrix));
+    playerCarShaderProgram.setUniform("projectionMatrix", linearAlgebra.formatMatrix(projMatrix));
+    gl.drawElements(gl.TRIANGLES, playerCarMesh.getIndexCount(), gl.UNSIGNED_SHORT, 0);
+}
+
+function endExam(reasons) {
+    if(stoppingExam) {
+        gameStarted = false;
+        setFullPageUI(resourcesToLoad["examEnd"].value);
+        let reasonsDisplay = document.getElementById("reasons-div");
+        reasonsDisplay.innerHTML = "";
+        currSpeed = 0;
+        loadedChunks = {};
+        chunks = {};
+        document.getElementById("try-again-button").onclick = () => {
+            currentCars = [];
+            setFullPageUI(resourcesToLoad["startPage"].value);
+        }
+        for(let reason of reasons)
+            reasonsDisplay.innerHTML += `<p class="reason-text">- ${reason}</p>`;
+    }
+}
+
+function recomputeStopAllowances() {
+    document.getElementById("stop-exam").checked = stoppingExam; 
+}
+
+function changeStopAllowances() {
+    stoppingExam = document.getElementById("stop-exam").checked;
 }

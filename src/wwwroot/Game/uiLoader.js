@@ -1,9 +1,11 @@
 const uiContainer = document.getElementById("ui-container");
 const pages = [
     {name: "startPage", htmlSrc: "Game/Pages/startPage.html"},
+    {name: "settingsPage", htmlSrc: "Game/Pages/settings.html"},
     {name: "roadDecisionPage", htmlSrc: "Game/Pages/roadDecision.html"},
-    {name: "overlay", htmlSrc: "Game/Pages/overlay.html"}
-]
+    {name: "overlay", htmlSrc: "Game/Pages/overlay.html"},
+    {name: "examEnd", htmlSrc: "Game/Pages/examEnd.html"}
+];
 
 function setUiResources() {
     for(let page of pages)

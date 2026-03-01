@@ -134,16 +134,14 @@ function drawChunk(chunk) {
         chunk.interchangeGeometry.bind();
         gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
         let foundNonPrior = false;
-        for(let road of chunk.roads) {
-            let endPoint = road.points[road.points.length - 1];
+        for(let roadGroup of chunk.interchangeRoads) {
+            let endPoint = roadGroup[0].points[0];
             if(equalFloatNumbers(endPoint.posX, chunk.nonPriorityPoint[0]) && equalFloatNumbers(endPoint.posZ, chunk.nonPriorityPoint[1])) {
-                let normalizedVec = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(chunk.splineData.center.posZ - endPoint.posZ, chunk.splineData.center.posX - endPoint.posX));
+                let normalizedVec = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(-(endPoint.posZ - chunk.splineData.center.posZ) * -1, (endPoint.posX - chunk.splineData.center.posX) * -1));
                 let moveVec = linearAlgebra.scaleVector(linearAlgebra.getVector4(normalizedVec[0], 0, normalizedVec[1], 1), roadSignOffset);
                 let translationMat = linearAlgebra.getTranslationMatrix(chunk.xCenter * 16 + endPoint.posX + moveVec[0], 0.1, chunk.zCenter * 16 + endPoint.posZ + moveVec[2]);
-                let angle = Math.atan2(chunk.splineData.center.posZ - endPoint.posZ, chunk.splineData.center.posX - endPoint.posX);
-                if(angle < 0)
-                    angle = Math.PI + (angle * -1);
-                let transformMat = linearAlgebra.multiplyMatrices(translationMat, linearAlgebra.multiplyMatrices(linearAlgebra.rotateAroundY(angle), linearAlgebra.getTranslationMatrix(0.0, 0.03, 0.03)));
+                let angle = normalizeAngle(Math.atan2(moveVec[0], moveVec[2]) + Math.PI);
+                let transformMat = linearAlgebra.multiplyMatrices(translationMat, linearAlgebra.rotateAroundY(angle));
                 nonPriorityShaderProgram.bind();
                 nonPriorityShaderProgram.setUniform("uSampler", nonPriorityTexture);
                 nonPriorityMesh.bind();
@@ -155,12 +153,10 @@ function drawChunk(chunk) {
                 foundNonPrior = true;
             }
             else {
-                let normalizedVec = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(-(chunk.splineData.center.posZ - endPoint.posZ), chunk.splineData.center.posX - endPoint.posX));
+                let normalizedVec = linearAlgebra.normalizeVec2(linearAlgebra.getVector2(-(endPoint.posZ - chunk.splineData.center.posZ) * -1, (endPoint.posX - chunk.splineData.center.posX) * -1));
                 let moveVec = linearAlgebra.scaleVector(linearAlgebra.getVector4(normalizedVec[0], 0, normalizedVec[1], 1), roadSignOffset);
                 let translationMat = linearAlgebra.getTranslationMatrix(chunk.xCenter * 16 + endPoint.posX + moveVec[0], 0.1, chunk.zCenter * 16 + endPoint.posZ + moveVec[2]);
-                let angle = Math.atan2(chunk.splineData.center.posZ - endPoint.posZ, chunk.splineData.center.posX - endPoint.posX);
-                if(angle < 0)
-                    angle = Math.PI + (angle * -1);
+                let angle = normalizeAngle(Math.atan2(moveVec[0], moveVec[2]) + Math.PI);
                 let transformMat = linearAlgebra.multiplyMatrices(translationMat, linearAlgebra.rotateAroundY(angle));
                 priorityShaderProgram.bind();
                 priorityShaderProgram.setUniform("uSampler", priorityTexture);

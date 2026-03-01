@@ -1,7 +1,6 @@
 function startRender() {
     const canvas = document.getElementById("road-canvas");
     const ctx = canvas.getContext("2d");
-    console.log("patkan");
     const strokeSize = 0.5;
     const visiblePoints = 16 * 5;
     const selectionScale = 20;
@@ -33,8 +32,8 @@ function startRender() {
             }
             index++;
         }
-        let dirVector = linearAlgebra.scaleVector(linearAlgebra.normalizeVec2(linearAlgebra.getVector2(nextPoint.posX - prevPoint.posX, nextPoint.posZ, prevPoint.posZ)), 1.3);
-        playerCarX = selectionData.chunk.xCenter * 16 + selectionData.point.posX + dirVector[1];
+        let dirVector = linearAlgebra.scaleVector(linearAlgebra.normalizeVec2(linearAlgebra.getVector2(nextPoint.posX - prevPoint.posX, nextPoint.posZ - prevPoint.posZ)), 0.7);
+        playerCarX = selectionData.chunk.xCenter * 16 + selectionData.point.posX - dirVector[1];
         playerCarZ = selectionData.chunk.zCenter * 16 + selectionData.point.posZ + dirVector[0];
         currRotation = Math.atan2(dirVector[1], dirVector[0]);
     };

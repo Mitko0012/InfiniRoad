@@ -7,6 +7,10 @@
     cursor: none;
 }
 
+html {
+    margin: none;
+}
+
 #ui-container {
     position: absolute;
     left: 50vw;
@@ -110,9 +114,9 @@
     border-radius: 10px;
     width: 60%;
     position: absolute;
-    top: 100%;
+    top: 75%;
     left: 50%;
-    transform: translate(-50%, -150%);
+    transform: translate(-50%);
     display: none;
 }
 
@@ -146,4 +150,79 @@
     top: 80%;
     font-size: 2.6em;
     color: white;
+}
+
+#end-overlay-div {
+    background-color: rgb(105, 0, 0);
+    width: 100%;
+    height: 100%;
+    margin: none;
+}
+
+#exam-end-title {
+    color: white;
+    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+    text-align: center;
+    font-size: 5em;
+    margin: 30px;
+}
+
+#reasons-div {
+    background-color: rgb(225, 103, 103);
+    border-radius: 15px;
+    width: 85%;
+    height: 70%;
+    position: relative;
+    left: 50%;
+    transform: translate(-50%);
+}
+
+.reason-text {
+    font-size: 2.4em;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: black;
+    text-align: left;
+    padding: 3%;
+}
+
+#try-again-button {
+    background-color: rgb(101, 5, 5);
+    color: white;
+    border-radius: 15px;
+    position: relative;
+    left: 50%;
+    transform: translate(-50%);
+}
+.blinker-img {
+    width: 10%;
+    padding-right: 2%;
+}
+
+#try-again-button {
+    width: 50%;
+    border: none;
+    background-color: rgb(74, 5, 5);
+    font-size: 1.5em;
+    color: white;
+    border-radius: 5px;
+
+}
+
+.setting-label {
+    color: white;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 2.7em;
+}
+
+.setting-pair {
+    text-align: center;
+    margin-top: 10%;
+    margin-bottom: 10%;
+}
+
+#logo-image {
+    width: 70%;
+    position: relative;
+    left: 50%;
+    transform: translate(-50%);
 }

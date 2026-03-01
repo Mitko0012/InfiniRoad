@@ -75,6 +75,17 @@ class NpcCar {
                             start = lookForward * 2;
                         }
                         else {
+                            end = this.currRoad.totalLength - 0.1;
+                            start = this.currRoad.totalLength - lookForward * 2;
+                        }
+                        break;
+                    }
+                    if(nextChunk.roads === undefined) {
+                        if(this.pointIndex - lookForward < 0) {
+                            end = 0;
+                            start = lookForward * 2;
+                        }
+                        else {
                             end = this.currRoad.totalLength - 0.01;
                             start = this.currRoad.totalLength - lookForward * 2;
                         }
@@ -189,6 +200,15 @@ class NpcCar {
         }
         let startPoint = walkOnRoad(startRoad, start, startFacing);
         let endPoint = walkOnRoad(endRoad, end, endFacing);
+        if(endChunk === undefined)
+            endChunk = {xCenter: 0, zCenter: 0}
+        if(startChunk === undefined)
+            startChunk = {xCenter: 0, zCenter: 0}
+        if(endPoint.point === undefined || startPoint.point === undefined)
+            return {
+                perp: linearAlgebra.scaleVector(linearAlgebra.normalizeVec2(linearAlgebra.getVector2(0, -1)), 0.6),
+                dir: linearAlgebra.normalizeVec2(linearAlgebra.getVector2(1, 0))
+            }; 
         endPoint.point[0] += endChunk.xCenter * 16;
         endPoint.point[1] += endChunk.zCenter * 16;
         startPoint.point[0] += startChunk.xCenter * 16;
@@ -207,6 +227,13 @@ class NpcCar {
         vel = Math.min(vel, this.speed);
         this.pointIndex += (vel * 0.02);
         let point = walkOnRoad(this.currRoad, this.pointIndex, this.facing);
+        for(let road of this.roadHistory)
+            for(let segment of road.takenSegments) {
+                if(segment["left"] === this)
+                    segment["left"] = null;
+                if(segment["right"] === this)
+                    segment["right"] = null;
+            }
         if(point.lengthTaken !== undefined) {
             let edgePoint = this.currRoad.points[this.facing ? this.currRoad.points.length - 1 : 0];
             let pv;
@@ -337,7 +364,8 @@ class NpcCar {
                     i = 0;
                 }
             }
-            checkingRoad.takenSegments[index + i][checkFacing ? "right" : "left"] = this;
+            if(checkingRoad.takenSegments[index + i] !== undefined)
+                checkingRoad.takenSegments[index + i][checkFacing ? "right" : "left"] = this;
             if(foundSegment)
                 remainingIters--;
             if(index === this.prevOccupancy.index && checkingRoad === this.prevOccupancy.road && checkFacing === this.prevOccupancy.isFacing)
@@ -355,43 +383,6 @@ class NpcCar {
             index--;
         else
             index++;
-        while(true) {
-            if(remainingIters <= 0)
-                return;
-            if(index < 0 || index >= checkingRoad.takenSegments.length) {
-                let oldPoint = checkFacing? checkingRoad.points[0] : checkingRoad.points[checkingRoad.points.length - 1]; 
-                historyIndex--;
-                if(historyIndex < 0)
-                    break;
-                checkingRoad = this.roadHistory[historyIndex];
-                let startPoint = checkingRoad.points[0];
-                let endPoint = checkingRoad.points[checkingRoad.points.length - 1];  
-                if(
-                    (startPoint.posX - oldPoint.posX < 0.001 && startPoint.posX - oldPoint.posX > -0.001) ||
-                    (startPoint.posZ - oldPoint.posZ < 0.001 && startPoint.posZ - oldPoint.posZ > -0.001)
-                ) {
-                    checkFacing = false;
-                    index = 0;
-                }
-                if(
-                    (endPoint.posX - oldPoint.posX < 0.001 && endPoint.posX - oldPoint.posX > -0.001) ||
-                    (endPoint.posZ - oldPoint.posZ < 0.001 && endPoint.posZ - oldPoint.posZ > -0.001)
-                ) {
-                    checkFacing = true;
-                    index = checkingRoad.takenSegments.length - 1;
-                }
-            }
-            if(foundSegment)
-                remainingIters--;
-            if(index === this.prevOccupancy.index && checkingRoad === this.prevOccupancy.road && checkFacing === this.prevOccupancy.isFacing)
-                foundSegment = true;
-            if(checkingRoad.takenSegments[index][checkFacing? "right" : "left"] === this)
-                checkingRoad.takenSegments[index][checkFacing? "right" : "left"] = null;
-            if(checkFacing)
-                index--;
-            else
-                index++;
-        }
         this.prevOccupancy = {
             road: this.currRoad,
             index: point.segment.index,
@@ -442,6 +433,8 @@ class NpcCar {
                         if(chunk === undefined || chunk.geometry === null)
                             return minSafeDist;
                         checkingChunk = chunk;
+                        if(checkingChunk.roads === undefined)
+                            return minSafeDist;
                         for(let road of checkingChunk.roads) {
                             let startPoint = road.points[0];
                             let endPoint = road.points[road.points.length - 1];  
@@ -537,7 +530,8 @@ class NpcCar {
                                 currentlyFacing = !data.facing;
                                 index = currentlyFacing? checkingRoad.pointSegments.length - 1 : 0; 
                             }
-                            length += checkingRoad.pointSegments[index].length;
+                            if(checkingRoad.pointSegments[index] !== undefined)
+                                length += checkingRoad.pointSegments[index].length;
                             if(length >= minSafeDist)
                                 return minSafeDist;
                             followingRoad = checkingRoad.points[index];
@@ -623,6 +617,14 @@ function getNext(road, endPoint, chunk, car) {
                 facing
             }
         case roadPointTypes.interchangeTerminating:
+            if(chunk.interchangeRoads === undefined)
+                return {
+                        type: roadPointTypes.interchangeTerminating,
+                        nextChunk: chunk,
+                        nextRoad: {points: [], takenSegments: [], pointSegments: []},
+                        nextPoint: {posX: 0, posZ: 0},
+                        facing: true
+                    };
             for(let interchangeRoadGroup of chunk.interchangeRoads) {
                 let continuingPoint = interchangeRoadGroup[0].points[0];
                 if(car.direction === null || car.direction === undefined)
