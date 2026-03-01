@@ -15,5 +15,4 @@ app.UseStaticFiles(new StaticFileOptions
     ContentTypeProvider = provider
 });
 
-
 app.Run();
