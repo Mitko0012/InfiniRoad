@@ -49,6 +49,9 @@ let leftArrowKeyDownAtLast = false;
 let rightArrowKeyDownAtLast = false;
 
 
+let toReloadInstructorOverlay = false
+let toReloadInstructorTextElem = false;
+
 function accelerate() {
     let turnFactor = (-Math.abs(turningAngle) + maxAngle) / maxAngle;
     let speedingFactor = (-(currSpeed) + playerMaxSpeed) / playerMaxSpeed;
@@ -90,10 +93,13 @@ function carUpdate() {
                 turningAngle = toTurn;
         }
     }
-    if(instructorOverlay === undefined)
+    if(instructorOverlay === undefined || toReloadInstructorOverlay) {
         instructorOverlay = document.getElementById("overlappingInstructorDiv");
-    if(instructorTextElem === undefined)
+        toReloadInstructorOverlay = false;
+    }
+    if(instructorTextElem === undefined || toReloadInstructorTextElem) {
         instructorTextElem = document.getElementById("instructorTextDiv");
+    }
     if(speedDisplay === undefined)
         speedDisplay = document.getElementById("speed-display");
     let forwardVec = linearAlgebra.getVector2(Math.cos(currRotation), Math.sin(currRotation));
@@ -120,7 +126,7 @@ function getRoadData() {
         allRoads.push(totalLastRoad);
     } else if(currChunk.interchangeRoads !== undefined && approachInterData.approaching)
         for(let roadGroup of currChunk.interchangeRoads) {
-            if(totalLastRoad !== undefined && equalFloatNumbers(roadGroup[0].points[0].posX, totalLastRoad.points[totalLastRoad.points.length - 1].posX) && equalFloatNumbers(roadGroup[0].points[0].posX, totalLastRoad.points[totalLastRoad.points.length - 1].posX)) {
+            if(totalLastRoad !== undefined && equalFloatNumbers(roadGroup[0].points[0].posX, totalLastRoad.points[totalLastRoad.points.length - 1].posX) && equalFloatNumbers(roadGroup[0].points[0].posZ, totalLastRoad.points[totalLastRoad.points.length - 1].posZ)) {
                 allRoads.push(roadGroup[carData.direction]);
                 break;
             }    
@@ -315,12 +321,14 @@ function updatePlayerStatus(chunk, road, segmentIndex, facing, inCorrectLane, ma
             case T_INTERSECTION:
                 carData.direction = Math.round(Math.random());
                 let nextRoad = getNext(road, road.points[road.points.length - 1], chunk, {carData}).nextRoad;
-                let startVec = linearAlgebra.getVector3(nextRoad.points[0].posX - chunk.splineData.center.posX, 0, nextRoad.points[0].posZ - chunk.splineData.center.posZ);
-                let endVec = linearAlgebra.getVector3(nextRoad.points[nextRoad.points.length - 1].posX - chunk.splineData.center.posX, 0, nextRoad.points[nextRoad.points.length - 1].posZ - chunk.splineData.center.posZ);
-                let rotatedMat = linearAlgebra.rotateAroundY(-Math.atan2(startVec[1], startVec[0]));
-                let appliedStartVec = linearAlgebra.multiplyMatrixAndVector(rotatedMat, startVec);
-                let appliedEndVec = linearAlgebra.multiplyMatrixAndVector(rotatedMat, endVec);
-                if(checkEqualAnglesWithTolerance(appliedStartVec[0], appliedEndVec[0], laneTolerance))
+                let startVec = linearAlgebra.getVector2(nextRoad.points[0].posX - chunk.splineData.center.posX, nextRoad.points[0].posZ - chunk.splineData.center.posZ);
+                let endVec = linearAlgebra.getVector2(nextRoad.points[nextRoad.points.length - 1].posX - chunk.splineData.center.posX, nextRoad.points[nextRoad.points.length - 1].posZ - chunk.splineData.center.posZ);
+                let degreeDiff = Math.atan2(1, 0) - Math.atan2(startVec[1], startVec[0]);
+                let appliedStartAngle = Math.atan2(startVec[1], startVec[0]) + degreeDiff;
+                let appliedStartVec = linearAlgebra.getVector2(Math.cos(appliedStartAngle), Math.sin(appliedStartAngle));
+                let appliedEndAngle = Math.atan2(endVec[1], endVec[0]) + degreeDiff;
+                let appliedEndVec = linearAlgebra.getVector2(Math.cos(appliedEndAngle), Math.sin(appliedEndAngle));
+                if(equalFloatNumbers(appliedStartVec[0], appliedEndVec[0]))
                     approachInterData.text = "forward";
                 else if(appliedStartVec[0] < appliedEndVec[0])
                     approachInterData.text = "right";
@@ -341,10 +349,10 @@ function updatePlayerStatus(chunk, road, segmentIndex, facing, inCorrectLane, ma
     }
     if(showingInstructorOverlay) {
         instructorTextElem.innerText = "";
-        if(approachInterData.approaching && magnitude > 0.4 && segmentIndex !== road.takenSegments.length - 1 && segmentIndex !== road.takenSegments.length - 2 && segmentIndex !== 0 && segmentIndex !== 1)
-            instructorTextElem.innerText += approachInterData.text === "forward" ? "Продължете направо!" : approachInterData.text === "right" ? "Завийте надясно!" : "Завийте наляво!";
+        if(approachInterData.approaching)
+            instructorTextElem.innerText += approachInterData.text === "forward" ? "Продължете направо! " : approachInterData.text === "right" ? "Завийте надясно! " : "Завийте наляво! ";
         if(inCorrectLane === "warn" && !onInterchangeRoad)
-            instructorTextElem.innerText += " Стойте в лентата!";
+            instructorTextElem.innerText += "Стойте в лентата! ";
         else if(inCorrectLane === false && !onInterchangeRoad && magnitude > 0.4 && segmentIndex !== road.takenSegments.length - 1 && segmentIndex !== road.takenSegments.length - 2 && segmentIndex !== 0 && segmentIndex !== 1)
             endExam(["Излязохте от лентата"]);
     }
@@ -356,7 +364,7 @@ function updatePlayerStatus(chunk, road, segmentIndex, facing, inCorrectLane, ma
             endExam(["Не пуснахте мигач правлино"]);
         else if(approachInterData.text === "left" && !leftBlinkerOn)
             endExam(["Не пуснахте мигач правилно"]);
-        else if(approachInterData.text === "forward" && rightBlinkerOn || leftBlinkerOn)
+        else if(approachInterData.text === "forward" && (rightBlinkerOn || leftBlinkerOn))
             endExam(["Не пуснахте мигач правилно"]);
 }
 
@@ -431,6 +439,8 @@ function renderPlayerCar() {
 function endExam(reasons) {
     if(stoppingExam) {
         gameStarted = false;
+        showingInstructorOverlay = false;
+        instructorOverlay.style.display = "none";
         setFullPageUI(resourcesToLoad["examEnd"].value);
         let reasonsDisplay = document.getElementById("reasons-div");
         reasonsDisplay.innerHTML = "";
@@ -443,6 +453,16 @@ function endExam(reasons) {
         }
         for(let reason of reasons)
             reasonsDisplay.innerHTML += `<p class="reason-text">- ${reason}</p>`;
+        tookPriority = false;
+        approachInterData.approaching = false;
+        lastApproachingInter = null;
+        approachInterData.text = "";
+        leftBlinkerOn = false;
+        rightBlinkerOn = false;
+        chunks = {};
+        activeChunks = {};
+        toReloadInstructorOverlay = true;
+        toReloadInstructorTextElem = true;
     }
 }
 

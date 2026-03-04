@@ -1,3 +1,7 @@
+html {
+    user-select: none;
+}
+
 #drawing-canvas {
     width: 50vw;
     height: 50vw;
@@ -15,7 +19,7 @@ html {
     position: absolute;
     left: 50vw;
     width: 50vw;
-    height: 50vw;
+    height: 52vw;
     top: 0px;
     transform: translate(-50%);
 }
@@ -147,8 +151,9 @@ html {
 
 #speed-display {
     position: absolute;
-    top: 80%;
-    font-size: 2.6em;
+    top: 75%;
+    font-size: 2.3em;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: white;
 }
 
@@ -164,14 +169,14 @@ html {
     font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
     text-align: center;
     font-size: 5em;
-    margin: 30px;
+    margin: 0px;
 }
 
 #reasons-div {
     background-color: rgb(225, 103, 103);
     border-radius: 15px;
     width: 85%;
-    height: 70%;
+    height: 60%;
     position: relative;
     left: 50%;
     transform: translate(-50%);
@@ -192,6 +197,7 @@ html {
     position: relative;
     left: 50%;
     transform: translate(-50%);
+    top: 5%;
 }
 .blinker-img {
     width: 10%;
@@ -205,7 +211,11 @@ html {
     font-size: 1.5em;
     color: white;
     border-radius: 5px;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+}
 
+#try-again-button:hover {
+    background-color: rgb(44, 0, 0);
 }
 
 .setting-label {

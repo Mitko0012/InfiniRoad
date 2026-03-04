@@ -84,6 +84,7 @@ onUpdate = () => {
         if(keysDown["s"]) {slowDown();}
         if(keysDown["a"]) {turn(false);}
         if(keysDown["d"]) {turn(true);}
+        if(keysDown["Escape"]) {pause(); return;}
 
         camPosX = playerCarX;
         camPosY = 0.36;
@@ -127,6 +128,17 @@ onUpdate = () => {
                 }
             }
         }
+    }
+}
+
+function pause() {
+    setFullPageUI(resourcesToLoad["settingsPage"].value);
+    gameStarted = false;
+    recomputeStopAllowances(); 
+    recomputeCarCount();
+    document.getElementsByClassName("back-button")[0].onclick = () => {
+        gameStarted = true;
+        clearUI();
     }
 }
 

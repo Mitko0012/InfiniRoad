@@ -242,6 +242,8 @@ class NpcCar {
                     let nextChunk = chunks[String(edgePoint.nextChunkData[0]) + " " + String(edgePoint.nextChunkData[1])];
                     if(nextChunk !== undefined && nextChunk.geometry !== null && nextChunk.isActive) {
                         this.currChunk = nextChunk;
+                        if(nextChunk.roads === undefined)
+                            break;
                         for(let road of nextChunk.roads) {
                             let startPoint = road.points[0];
                             let endPoint = road.points[road.points.length - 1];  
@@ -370,6 +372,8 @@ class NpcCar {
                 remainingIters--;
             if(index === this.prevOccupancy.index && checkingRoad === this.prevOccupancy.road && checkFacing === this.prevOccupancy.isFacing)
                 foundSegment = true;
+            if(checkingRoad.pointSegments[index + i] === undefined)
+                break;
             accumulatedLength += checkingRoad.pointSegments[index + i].length;
             if(accumulatedLength >= carLength)
                 break;
@@ -515,6 +519,8 @@ class NpcCar {
                         if(freeRoads)
                             return minSafeDist;
                         let length = 0;
+                        if(followingRoad === undefined || carPos === undefined)
+                            return minSafeDist;
                         while(!equalFloatNumbers(followingRoad.posX, carPos.posX) && !equalFloatNumbers(followingRoad.posZ, carPos.posZ)) {
                             if(currentlyFacing)
                                 index--;
@@ -535,6 +541,8 @@ class NpcCar {
                             if(length >= minSafeDist)
                                 return minSafeDist;
                             followingRoad = checkingRoad.points[index];
+                            if(followingRoad === undefined)
+                                return minSafeDist;
                         }
                         return length;
                     }

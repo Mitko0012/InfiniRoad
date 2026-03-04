@@ -1,3 +1,6 @@
 <img id="logo-image" src="Textures/logo.png" />
 <button class="main-button" onclick="setFullPageUI(resourcesToLoad[`roadDecisionPage`].value); startRender();">Начало</button>
-<button class="main-button" onclick="setFullPageUI(resourcesToLoad[`settingsPage`].value); recomputeStopAllowances(); recomputeCarCount();">Настройки</button>
+<button class="main-button" onclick="setFullPageUI(resourcesToLoad[`settingsPage`].value); recomputeStopAllowances(); recomputeCarCount(); document.getElementById('back-button').onclick = () => {
+    setFullPageUI(resourcesToLoad[`startPage`].value);
+}"
+>Настройки</button>

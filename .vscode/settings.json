@@ -1,0 +1,5 @@
+{
+    "appService.preDeployTask": "publish-release",
+    "appService.deploySubpath": "src\\bin\\Release\\net6.0\\publish",
+    "appService.defaultWebAppToDeploy": "/subscriptions/1630011e-889e-430d-bbd4-5e93b5a2cc91/resourceGroups/MyBG_group/providers/Microsoft.Web/sites/MyBG"
+}
