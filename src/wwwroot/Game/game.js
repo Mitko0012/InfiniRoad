@@ -138,6 +138,9 @@ function pause() {
     recomputeCarCount();
     document.getElementsByClassName("back-button")[0].onclick = () => {
         gameStarted = true;
+        toReloadInstructorOverlay = true;
+        toReloadInstructorTextElem = true;
+        toReloadSpeedDisplay = true;
         clearUI();
     }
 }

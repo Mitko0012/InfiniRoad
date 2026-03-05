@@ -51,6 +51,7 @@ let rightArrowKeyDownAtLast = false;
 
 let toReloadInstructorOverlay = false
 let toReloadInstructorTextElem = false;
+let toReloadSpeedDisplay = false;
 
 function accelerate() {
     let turnFactor = (-Math.abs(turningAngle) + maxAngle) / maxAngle;
@@ -99,9 +100,12 @@ function carUpdate() {
     }
     if(instructorTextElem === undefined || toReloadInstructorTextElem) {
         instructorTextElem = document.getElementById("instructorTextDiv");
+        toReloadInstructorTextElem = false;
     }
-    if(speedDisplay === undefined)
+    if(speedDisplay === undefined || toReloadSpeedDisplay) {
         speedDisplay = document.getElementById("speed-display");
+        toReloadSpeedDisplay = false;
+    }
     let forwardVec = linearAlgebra.getVector2(Math.cos(currRotation), Math.sin(currRotation));
     playerCarX += forwardVec[0] * currSpeed * deltaTime;
     playerCarZ += forwardVec[1] * currSpeed * deltaTime;
@@ -210,6 +214,8 @@ function verifyCorrectness() {
     if(moveBack || moveForward) {
         let endPoint = moveBack? roadData.road.points[0] : roadData.road.points[roadData.road.points.length - 1];
         let nextData = getNext(roadData.road, endPoint, roadData.currChunk, carData);
+        if(nextData === undefined)
+            return;
         if(moveBack) {
             prevLanePoint = walkOnRoad(nextData.nextRoad, checkForward - totalSegmentLength, nextData.facing);
             nextLanePoint = walkOnRoad(roadData.road, totalSegmentLength + checkForward, true);
@@ -366,6 +372,12 @@ function updatePlayerStatus(chunk, road, segmentIndex, facing, inCorrectLane, ma
             endExam(["Не пуснахте мигач правилно"]);
         else if(approachInterData.text === "forward" && (rightBlinkerOn || leftBlinkerOn))
             endExam(["Не пуснахте мигач правилно"]);
+        if(approachInterData.approaching || (inCorrectLane === "warn" && !onInterchangeRoad))
+            return;
+        if(showingInstructorOverlay) {
+        showingInstructorOverlay = false;
+        instructorOverlay.style.display = "none";
+    }
 }
 
 function normalizeAngle(angle) {
@@ -395,10 +407,6 @@ function checkApproaching(chunk, road, initSegmentIndex, distanceToLook, isFacin
             approachInterData.interchange = currChunk.interchange;
             return;
         }
-    }
-    if(showingInstructorOverlay) {
-        showingInstructorOverlay = false;
-        instructorOverlay.style.display = "none";
     }
     approachInterData.approaching = false;
 }
@@ -438,6 +446,7 @@ function renderPlayerCar() {
 
 function endExam(reasons) {
     if(stoppingExam) {
+        toReloadSpeedDisplay = true;
         gameStarted = false;
         showingInstructorOverlay = false;
         instructorOverlay.style.display = "none";
